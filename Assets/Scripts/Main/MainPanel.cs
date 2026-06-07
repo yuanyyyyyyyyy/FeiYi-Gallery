@@ -36,11 +36,11 @@ public class MainPanel : UIFrame
         // 背景
         var bg = NewUI("BG", root);
         Stretch(bg);
-        bg.AddComponent<Image>().color = InkBlack;
+        var bgImg = bg.AddComponent<Image>(); bgImg.color = InkBlack; bgImg.raycastTarget = false;
 
         // ── 顶部标题栏 ──
         var header = AnchorTop("Header", root, 60);
-        header.AddComponent<Image>().color = DarkBar;
+        header.AddComponent<Image>(); header.GetComponent<Image>().color = DarkBar; header.GetComponent<Image>().raycastTarget = false;
 
         // 左侧印章小图标
         AddSealLogo("MiniLogo", header.transform, new Vector2(-200, 0), 36, "遗", 20);
@@ -71,7 +71,7 @@ public class MainPanel : UIFrame
         cr.anchorMin = new Vector2(0, 0.1f); cr.anchorMax = new Vector2(1, 0.92f);
         cr.offsetMin = cr.offsetMax = Vector2.zero; cr.anchoredPosition = Vector2.zero;
         cr.sizeDelta = Vector2.zero;
-        cards.AddComponent<Image>().color = InkBlack;
+        cards.AddComponent<Image>(); cards.GetComponent<Image>().color = InkBlack; cards.GetComponent<Image>().raycastTarget = false;
 
         for (int i = 0; i < 4; i++)
         {
@@ -81,12 +81,12 @@ public class MainPanel : UIFrame
 
         // ── 底部导航栏 ──
         var nav = AnchorBottom("NavBar", root, 55);
-        nav.AddComponent<Image>().color = DarkBar;
+        nav.AddComponent<Image>(); nav.GetComponent<Image>().color = DarkBar; nav.GetComponent<Image>().raycastTarget = false;
 
         string[] navNames = { "背包", "设置", "帮助", "退出" };
         Color[] navColors = { JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
         System.Action[] navActions = {
-            () => { if (backpackPanel == null) CreateBackpackPanel(); backpackPanel.SetActive(!backpackPanel.activeSelf); },
+            () => { if (backpackPanel == null) { CreateBackpackPanel(); return; } backpackPanel.SetActive(!backpackPanel.activeSelf); },
             () => TogglePanel(settingsPanel),
             () => TogglePanel(helpPanel),
             () => { GameManager.Instance.Logout(); SceneLoader.Instance.LoadScene(SceneNames.Login); }
@@ -165,29 +165,61 @@ public class MainPanel : UIFrame
         backpackPanel = MakeOverlay(rootT, "我的背包", "", JadeGreen);
         backpackPanel.SetActive(true);
 
-        // 动态填充内容
         var panel = backpackPanel.transform.Find("Panel");
         var contentArea = panel.Find("C");
-        if (contentArea != null)
+        if (contentArea == null) return;
+
+        Object.Destroy(contentArea.GetComponent<Text>());
+
+        if (items.Count == 0)
         {
-            var cl = contentArea.GetComponent<Text>();
-            if (items.Count == 0)
-            {
-                cl.text = "暂无收藏展品\n浏览展品时点击「收藏」即可添加到背包";
-                cl.alignment = TextAnchor.MiddleCenter;
-            }
-            else
-            {
-                cl.alignment = TextAnchor.UpperLeft;
-                string content = "";
-                foreach (var id in items)
-                {
-                    var data = GameManager.Instance.GetExhibit(id);
-                    string label = data != null ? data.name : id;
-                    content += $"• {label}\n";
-                }
-                cl.text = content;
-            }
+            var empty = NewUI("Empty", contentArea);
+            Stretch(empty);
+            var et = empty.AddComponent<Text>();
+            et.font = Font(); et.text = "暂无收藏展品\n浏览展品时点击「收藏」即可添加到背包";
+            et.fontSize = 16; et.color = new Color(0.5f, 0.5f, 0.5f); et.alignment = TextAnchor.MiddleCenter;
+            return;
         }
+
+        float rowH = 0.12f;
+        for (int i = 0; i < items.Count; i++)
+        {
+            string id = items[i];
+            var data = GameManager.Instance.GetExhibit(id);
+            string label = data != null ? data.name : id;
+
+            var row = NewUI($"Item_{i}", contentArea);
+            var rr = row.GetComponent<RectTransform>();
+            rr.anchorMin = new Vector2(0, 1f - (i + 1) * rowH);
+            rr.anchorMax = new Vector2(1f, 1f - i * rowH);
+            rr.offsetMin = rr.offsetMax = Vector2.zero;
+            var ri = row.AddComponent<Image>(); ri.color = i % 2 == 0 ? new Color(0.95f, 0.93f, 0.88f) : XuanPaper; ri.raycastTarget = false;
+
+            var nameObj = NewUI("Name", row.transform);
+            var nr = nameObj.GetComponent<RectTransform>();
+            nr.anchorMin = Vector2.zero; nr.anchorMax = new Vector2(0.7f, 1f);
+            nr.offsetMin = new Vector2(10, 0); nr.offsetMax = Vector2.zero;
+            var nt = nameObj.AddComponent<Text>();
+            nt.font = Font(); nt.text = $"• {label}"; nt.fontSize = 16; nt.color = InkBlack; nt.alignment = TextAnchor.MiddleLeft;
+
+            var del = NewUI("Del", row.transform);
+            var dr = del.GetComponent<RectTransform>();
+            dr.anchorMin = new Vector2(0.75f, 0.1f); dr.anchorMax = new Vector2(0.95f, 0.9f);
+            dr.offsetMin = dr.offsetMax = Vector2.zero;
+            del.AddComponent<Image>().color = ZhuRed;
+            var db = del.AddComponent<Button>();
+            string eid = id;
+            db.onClick.AddListener(() => OnDeleteFromBackpack(eid));
+            var dt = NewUI("DT", del.transform); Stretch(dt);
+            var dtt = dt.AddComponent<Text>();
+            dtt.font = Font(); dtt.text = "删除"; dtt.fontSize = 14; dtt.color = Color.white; dtt.alignment = TextAnchor.MiddleCenter;
+        }
+    }
+
+    private void OnDeleteFromBackpack(string exhibitId)
+    {
+        BackpackManager.Instance.RemoveFromBackpack(GameManager.Instance.currentUser, exhibitId);
+        CreateBackpackPanel();
+        backpackPanel.SetActive(true);
     }
 }

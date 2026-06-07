@@ -34,14 +34,18 @@ public class LoginManager : UIFrame
         // 背景
         var bg = NewUI("BG", root);
         Stretch(bg);
-        bg.AddComponent<Image>().color = InkBlack;
+        var bgImg = bg.AddComponent<Image>();
+        bgImg.color = InkBlack;
+        bgImg.raycastTarget = false;
 
         // 居中面板
         var panel = NewUI("Panel", root);
         var pr = panel.GetComponent<RectTransform>();
         pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
         pr.sizeDelta = new Vector2(440, 560);
-        panel.AddComponent<Image>().color = XuanPaper;
+        var panelImg = panel.AddComponent<Image>();
+        panelImg.color = XuanPaper;
+        panelImg.raycastTarget = false;
 
         // 中式边框装饰线
         AddBorderLines(panel, 3f);

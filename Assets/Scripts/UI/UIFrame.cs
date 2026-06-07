@@ -203,7 +203,7 @@ public abstract class UIFrame : MonoBehaviour
         r.pivot = new Vector2(0.5f, 1f);
         r.sizeDelta = new Vector2(size, size);
         r.anchoredPosition = pos;
-        o.AddComponent<Image>().color = ZhuRed;
+        var sealLogoImg = o.AddComponent<Image>(); sealLogoImg.color = ZhuRed; sealLogoImg.raycastTarget = false;
         var txt = NewUI("T", o.transform);
         Stretch(txt);
         var t = txt.AddComponent<Text>();
@@ -230,7 +230,7 @@ public abstract class UIFrame : MonoBehaviour
         var llr = leftLine.GetComponent<RectTransform>();
         llr.anchorMin = new Vector2(0, 0.3f); llr.anchorMax = new Vector2(0.35f, 0.7f);
         llr.offsetMin = llr.offsetMax = Vector2.zero; llr.sizeDelta = Vector2.zero;
-        leftLine.AddComponent<Image>().color = lineColor;
+        var llImg = leftLine.AddComponent<Image>(); llImg.color = lineColor; llImg.raycastTarget = false;
 
         // 中间文字
         var tObj = NewUI("T", o.transform);
@@ -245,7 +245,7 @@ public abstract class UIFrame : MonoBehaviour
         var rlr = rightLine.GetComponent<RectTransform>();
         rlr.anchorMin = new Vector2(0.65f, 0.3f); rlr.anchorMax = new Vector2(1f, 0.7f);
         rlr.offsetMin = rlr.offsetMax = Vector2.zero; rlr.sizeDelta = Vector2.zero;
-        rightLine.AddComponent<Image>().color = lineColor;
+        var rlImg = rightLine.AddComponent<Image>(); rlImg.color = lineColor; rlImg.raycastTarget = false;
 
         return o;
     }
@@ -268,7 +268,7 @@ public abstract class UIFrame : MonoBehaviour
         ulr.anchorMin = new Vector2(0, 0); ulr.anchorMax = new Vector2(1, 0);
         ulr.pivot = new Vector2(0.5f, 0f);
         ulr.sizeDelta = new Vector2(0, 2);
-        underline.AddComponent<Image>().color = ZhuRed;
+        var ulImg = underline.AddComponent<Image>(); ulImg.color = ZhuRed; ulImg.raycastTarget = false;
 
         // 文本
         var tObj = NewUI("Text", o.transform);
@@ -308,6 +308,7 @@ public abstract class UIFrame : MonoBehaviour
         pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
         pr.sizeDelta = new Vector2(440, 380);
         panel.AddComponent<Image>().color = XuanPaper;
+        panel.GetComponent<Image>().raycastTarget = false;
 
         // 顶部朱红装饰线
         var topLine = NewUI("TopLine", panel.transform);
@@ -315,7 +316,7 @@ public abstract class UIFrame : MonoBehaviour
         tlr.anchorMin = new Vector2(0, 1); tlr.anchorMax = new Vector2(1, 1);
         tlr.pivot = new Vector2(0.5f, 1f);
         tlr.sizeDelta = new Vector2(0, 3);
-        topLine.AddComponent<Image>().color = ZhuRed;
+        var tlImg = topLine.AddComponent<Image>(); tlImg.color = ZhuRed; tlImg.raycastTarget = false;
 
         // 标题
         var tObj = NewUI("T", panel.transform);
@@ -457,7 +458,7 @@ public abstract class UIFrame : MonoBehaviour
         tr.pivot = new Vector2(0.5f, 1f);
         tr.sizeDelta = new Vector2(0, lineWidth);
         tr.anchoredPosition = new Vector2(0, -8);
-        top.AddComponent<Image>().color = ZhuRed;
+        var topImg = top.AddComponent<Image>(); topImg.color = ZhuRed; topImg.raycastTarget = false;
 
         // 底部线
         var bot = NewUI("BotLine", panel.transform);
@@ -466,7 +467,7 @@ public abstract class UIFrame : MonoBehaviour
         br.pivot = new Vector2(0.5f, 0f);
         br.sizeDelta = new Vector2(0, lineWidth);
         br.anchoredPosition = new Vector2(0, 8);
-        bot.AddComponent<Image>().color = ZhuRed;
+        var botImg = bot.AddComponent<Image>(); botImg.color = ZhuRed; botImg.raycastTarget = false;
     }
 
     // ──────────────────── 圆形印章图标（品类卡片用） ────────────────────
@@ -478,7 +479,7 @@ public abstract class UIFrame : MonoBehaviour
         r.anchorMin = r.anchorMax = center;
         r.pivot = new Vector2(0.5f, 0.5f);
         r.sizeDelta = new Vector2(radius * 2, radius * 2);
-        o.AddComponent<Image>().color = ZhuRed;
+        var sealIconImg = o.AddComponent<Image>(); sealIconImg.color = ZhuRed; sealIconImg.raycastTarget = false;
         var tObj = NewUI("T", o.transform);
         Stretch(tObj);
         var t = tObj.AddComponent<Text>();

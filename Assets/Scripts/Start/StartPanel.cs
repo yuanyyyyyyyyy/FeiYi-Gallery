@@ -27,7 +27,7 @@ public class StartPanel : UIFrame
         // 背景
         var bg = NewUI("BG", root);
         Stretch(bg);
-        bg.AddComponent<Image>().color = InkBlack;
+        var bgImg = bg.AddComponent<Image>(); bgImg.color = InkBlack; bgImg.raycastTarget = false;
 
         // 印章 Logo（大）
         AddSealLogo("Logo", root, new Vector2(0, -80), 120, "非遗", 50);

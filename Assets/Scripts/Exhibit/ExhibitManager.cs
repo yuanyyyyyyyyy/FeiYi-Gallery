@@ -51,7 +51,7 @@ public class ExhibitManager : UIFrame
 
         // ── 顶部栏 ──
         var header = AnchorTop("Header", root, 55);
-        header.AddComponent<Image>().color = DarkBar;
+        var hImg = header.AddComponent<Image>(); hImg.color = DarkBar; hImg.raycastTarget = false;
 
         // 返回按钮
         var backObj = NewUI("BackBtn", header.transform);
@@ -87,9 +87,9 @@ public class ExhibitManager : UIFrame
 
         // ── 底部栏 ──
         var bottomBar = AnchorBottom("Bottom", root, 55);
-        bottomBar.AddComponent<Image>().color = DarkBar;
+        var bbi = bottomBar.AddComponent<Image>(); bbi.color = DarkBar; bbi.raycastTarget = false;
 
-        AddBtnAnchored("PrevBtn", bottomBar.transform, new Vector2(0, 0.5f), new Vector2(120, 38), new Vector2(15, 0), "< 上一个", JadeGreen).onClick.AddListener(ShowPrevious);
+        AddBtnAnchored("NextBtn2", bottomBar.transform, new Vector2(0, 0.5f), new Vector2(120, 38), new Vector2(15, 0), "下一个", JadeGreen).onClick.AddListener(ShowNext);
         AddBtnAnchored("CollectBtn2", bottomBar.transform, new Vector2(0.5f, 0.5f), new Vector2(130, 38), Vector2.zero, "收藏", ZhuRed).onClick.AddListener(OnCollectClicked);
         AddBtnAnchored("NextBtn", bottomBar.transform, new Vector2(1f, 0.5f), new Vector2(120, 38), new Vector2(-135, 0), "下一个 >", JadeGreen).onClick.AddListener(ShowNext);
 
@@ -104,14 +104,14 @@ public class ExhibitManager : UIFrame
         dpr.anchorMin = new Vector2(1f, 0f); dpr.anchorMax = Vector2.one;
         dpr.pivot = new Vector2(1f, 0.5f);
         dpr.sizeDelta = new Vector2(320, 0);
-        detailPanelObj.AddComponent<Image>().color = new Color(0.12f, 0.12f, 0.12f, 0.95f);
+        var dpi = detailPanelObj.AddComponent<Image>(); dpi.color = new Color(0.12f, 0.12f, 0.12f, 0.95f); dpi.raycastTarget = false;
 
         // 顶部朱红装饰线
         var topLine = NewUI("TopLine", detailPanelObj.transform);
         var tlr = topLine.GetComponent<RectTransform>();
         tlr.anchorMin = new Vector2(0, 1); tlr.anchorMax = new Vector2(1, 1);
         tlr.pivot = new Vector2(0.5f, 1f); tlr.sizeDelta = new Vector2(0, 3);
-        topLine.AddComponent<Image>().color = ZhuRed;
+        var tli = topLine.AddComponent<Image>(); tli.color = ZhuRed; tli.raycastTarget = false;
 
         // Tabs
         string[] tabNames = { "历史背景", "制作工艺", "文化寓意" };
