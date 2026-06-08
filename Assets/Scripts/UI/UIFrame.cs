@@ -486,4 +486,36 @@ public abstract class UIFrame : MonoBehaviour
         t.font = Font(); t.text = text; t.fontSize = fontSize; t.color = Color.white; t.alignment = TextAnchor.MiddleCenter;
         return o;
     }
+
+    // ──────────────────── 水墨晕染边缘 ────────────────────
+
+    /// <summary>
+    /// 在画轴四角添加水墨晕染效果 — 半透明墨色渐变角
+    /// </summary>
+    protected void AddInkWashCorners(Transform parent, float cornerSize = 120f)
+    {
+        Color washColor = new Color(0.15f, 0.15f, 0.15f, 0.3f);
+
+        // 左上角
+        AddWashCorner("Wash_TL", parent, new Vector2(0, 1), new Vector2(0, 1), cornerSize, washColor);
+        // 右上角
+        AddWashCorner("Wash_TR", parent, new Vector2(1, 1), new Vector2(1, 1), cornerSize, washColor);
+        // 左下角
+        AddWashCorner("Wash_BL", parent, new Vector2(0, 0), new Vector2(0, 0), cornerSize, washColor);
+        // 右下角
+        AddWashCorner("Wash_BR", parent, new Vector2(1, 0), new Vector2(1, 0), cornerSize, washColor);
+    }
+
+    private void AddWashCorner(string name, Transform parent, Vector2 anchor, Vector2 pivot, float size, Color color)
+    {
+        var o = NewUI(name, parent);
+        var r = o.GetComponent<RectTransform>();
+        r.anchorMin = r.anchorMax = anchor;
+        r.pivot = pivot;
+        r.sizeDelta = new Vector2(size, size);
+        var img = o.AddComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
+        // 用简单的半透明纯色模拟水墨晕染（后续可替换为渐变纹理）
+    }
 }

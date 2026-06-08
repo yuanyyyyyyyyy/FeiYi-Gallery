@@ -3,10 +3,22 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 
 /// <summary>
-/// 展示场景管理器 — 新中式 3D 展示 + 信息面板
+/// 展示场景管理器 — 3D模型居中 + 底部抽屉式信息面板
 /// </summary>
 public class ExhibitManager : UIFrame
 {
+    // ──────────────────── 配色 ────────────────────
+    private static readonly Color XuanPaperBg  = new Color(0.96f, 0.94f, 0.90f);
+    private static readonly Color OchreBrown    = new Color(0.55f, 0.35f, 0.17f);
+    private static readonly Color ChinaRed      = new Color(0.70f, 0.13f, 0.13f);
+    private static readonly Color GoldBtn       = new Color(0.83f, 0.69f, 0.22f);
+    private static readonly Color InkTitle      = new Color(0.17f, 0.17f, 0.17f);
+    private static readonly Color SummaryGray   = new Color(0.35f, 0.35f, 0.35f);
+    private static readonly Color PedestalColor = new Color(0.91f, 0.86f, 0.78f);
+    private static readonly Color DrawerBg      = new Color(0.98f, 0.96f, 0.92f);
+    private static readonly Color TabActiveBg   = new Color(0.88f, 0.72f, 0.45f);
+    private static readonly Color TabInactiveBg = new Color(0.92f, 0.89f, 0.83f);
+
     private static readonly Dictionary<string, Color> ModelColors = new Dictionary<string, Color>
     {
         { "vase", new Color(0.85f, 0.88f, 0.92f) }, { "cup", new Color(0.95f, 0.95f, 0.92f) },
@@ -15,16 +27,37 @@ public class ExhibitManager : UIFrame
         { "erhu", new Color(0.55f, 0.30f, 0.15f) }
     };
 
+    private static readonly string[] TabTitles = { "历史背景", "制作工艺", "文化寓意" };
+    private static readonly string[] TabIcons  = { "历", "艺", "寓" };
+
     private List<ExhibitData> currentExhibits = new List<ExhibitData>();
     private int currentExhibitIndex;
     private GameObject currentModel;
     private Text exhibitNameText;
-    private Text exhibitDescText;
-    private Text contentText;
-    private GameObject detailPanelObj;
-    private ExhibitData currentExhibit;
-    private int currentTab;
+    private GameObject quoteObj;
+    private Text quoteText;
     private GameObject pedestal;
+    private ExhibitData currentExhibit;
+
+    // 抽屉相关
+    private GameObject drawerPanel;
+    private RectTransform drawerRt;
+    private GameObject drawerContent;
+    private Text drawerContentText;
+    private GameObject[] tabBtns = new GameObject[3];
+    private Text[] tabTexts = new Text[3];
+    private GameObject handleBtn;
+    private Text handleText;
+    private int activeTab;
+    private bool drawerOpen;
+    private bool drawerAnimating;
+    private const float DrawerAnimDuration = 0.3f;
+    private const float FooterHeight = 55f;
+
+    // 收藏
+    private GameObject collectBtn;
+    private Text collectBtnText;
+    private bool isCollected;
 
     private void Start()
     {
@@ -41,121 +74,369 @@ public class ExhibitManager : UIFrame
         currentExhibitIndex = 0;
     }
 
+    // ──────────────────── UI 创建 ────────────────────
+
     private void CreateUI()
     {
         var root = InitCanvas();
 
-        // 淡入
-        var cg = root.gameObject.AddComponent<CanvasGroup>();
-        StartCoroutine(FadeIn(cg, 0.6f));
+        var canvas = GetComponentInChildren<Canvas>();
+        if (canvas != null)
+        {
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = Camera.main;
+            canvas.planeDistance = 20f;
+        }
 
-        // ── 顶部栏 ──
-        var header = AnchorTop("Header", root, 55);
-        var hImg = header.AddComponent<Image>(); hImg.color = DarkBar; hImg.raycastTarget = false;
+        var cam = Camera.main;
+        if (cam != null)
+        {
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = XuanPaperBg;
+        }
 
-        // 返回按钮
+        CreateHeader(root);
+        CreateQuoteOverlay(root);
+        CreateDrawer(root);
+        CreateFooter(root);
+    }
+
+    // ──────────────────── 顶部导航栏 ────────────────────
+
+    private void CreateHeader(Transform parent)
+    {
+        var header = AnchorTop("Header", parent, 55);
+        var hImg = header.AddComponent<Image>();
+        hImg.color = new Color(XuanPaperBg.r, XuanPaperBg.g, XuanPaperBg.b, 0.95f);
+        hImg.raycastTarget = false;
+
+        var divLine = NewUI("DivLine", header.transform);
+        var dlr = divLine.GetComponent<RectTransform>();
+        dlr.anchorMin = new Vector2(0, 0); dlr.anchorMax = new Vector2(1, 0);
+        dlr.pivot = new Vector2(0.5f, 0f); dlr.sizeDelta = new Vector2(0, 2);
+        var dlImg = divLine.AddComponent<Image>(); dlImg.color = OchreBrown; dlImg.raycastTarget = false;
+
         var backObj = NewUI("BackBtn", header.transform);
         var br = backObj.GetComponent<RectTransform>();
         br.anchorMin = br.anchorMax = new Vector2(0, 0.5f);
         br.pivot = new Vector2(0, 0.5f);
-        br.sizeDelta = new Vector2(100, 38);
-        br.anchoredPosition = new Vector2(10, 0);
-        backObj.AddComponent<Image>().color = ZhuRed;
+        br.sizeDelta = new Vector2(100, 36);
+        br.anchoredPosition = new Vector2(12, 0);
+        backObj.AddComponent<Image>().color = OchreBrown;
         backObj.AddComponent<Button>().onClick.AddListener(() => SceneLoader.Instance.LoadScene(SceneNames.Main));
         var btObj = NewUI("T", backObj.transform); Stretch(btObj);
         var bt = btObj.AddComponent<Text>();
-        bt.font = Font(); bt.text = "< 返回"; bt.fontSize = 18; bt.color = Color.white; bt.alignment = TextAnchor.MiddleCenter;
+        bt.font = Font(); bt.text = "< 返回"; bt.fontSize = 16; bt.color = Color.white; bt.alignment = TextAnchor.MiddleCenter;
 
-        // 展品名称
-        exhibitNameText = AddLabel("Name", header.transform, Vector2.zero, new Vector2(350, 35), "", 22, ZhuRed);
+        var nameObj = NewUI("Name", header.transform);
+        var nr = nameObj.GetComponent<RectTransform>();
+        nr.anchorMin = nr.anchorMax = new Vector2(0.5f, 0.5f);
+        nr.pivot = new Vector2(0.5f, 0.5f);
+        nr.sizeDelta = new Vector2(400, 30);
+        exhibitNameText = nameObj.AddComponent<Text>();
+        exhibitNameText.font = Font(); exhibitNameText.fontSize = 20; exhibitNameText.color = InkTitle; exhibitNameText.alignment = TextAnchor.MiddleCenter;
 
-        // 收藏按钮（右上角）
-        var collectHeaderBtn = NewUI("CollectBtn", header.transform);
-        var chr = collectHeaderBtn.GetComponent<RectTransform>();
-        chr.anchorMin = chr.anchorMax = new Vector2(1f, 0.5f);
-        chr.pivot = new Vector2(1f, 0.5f);
-        chr.sizeDelta = new Vector2(100, 34);
-        chr.anchoredPosition = new Vector2(-15, 0);
-        collectHeaderBtn.AddComponent<Image>().color = JadeGreen;
-        collectHeaderBtn.AddComponent<Button>().onClick.AddListener(OnCollectClicked);
-        var cbt = NewUI("T", collectHeaderBtn.transform); Stretch(cbt);
-        var cbtxt = cbt.AddComponent<Text>();
-        cbtxt.font = Font(); cbtxt.text = "♡ 收藏"; cbtxt.fontSize = 16; cbtxt.color = Color.white; cbtxt.alignment = TextAnchor.MiddleCenter;
-
-        // 简短描述
-        exhibitDescText = AddLabel("Desc", root, new Vector2(0, -70), new Vector2(500, 28), "", 15, XuanPaper);
-
-        // ── 底部栏 ──
-        var bottomBar = AnchorBottom("Bottom", root, 55);
-        var bbi = bottomBar.AddComponent<Image>(); bbi.color = DarkBar; bbi.raycastTarget = false;
-
-        AddBtnAnchored("NextBtn2", bottomBar.transform, new Vector2(0, 0.5f), new Vector2(120, 38), new Vector2(15, 0), "下一个", JadeGreen).onClick.AddListener(ShowNext);
-        AddBtnAnchored("CollectBtn2", bottomBar.transform, new Vector2(0.5f, 0.5f), new Vector2(130, 38), Vector2.zero, "收藏", ZhuRed).onClick.AddListener(OnCollectClicked);
-        AddBtnAnchored("NextBtn", bottomBar.transform, new Vector2(1f, 0.5f), new Vector2(120, 38), new Vector2(-135, 0), "下一个 >", JadeGreen).onClick.AddListener(ShowNext);
-
-        // ── 详情面板（右侧）──
-        CreateDetailPanel(root);
+        collectBtn = NewUI("CollectBtn", header.transform);
+        var cr = collectBtn.GetComponent<RectTransform>();
+        cr.anchorMin = cr.anchorMax = new Vector2(1f, 0.5f);
+        cr.pivot = new Vector2(1f, 0.5f);
+        cr.sizeDelta = new Vector2(100, 34);
+        cr.anchoredPosition = new Vector2(-12, 0);
+        collectBtn.AddComponent<Image>().color = OchreBrown;
+        collectBtn.AddComponent<Button>().onClick.AddListener(OnCollectClicked);
+        var cbtObj = NewUI("T", collectBtn.transform); Stretch(cbtObj);
+        collectBtnText = cbtObj.AddComponent<Text>();
+        collectBtnText.font = Font(); collectBtnText.fontSize = 16; collectBtnText.color = Color.white; collectBtnText.alignment = TextAnchor.MiddleCenter;
+        collectBtnText.text = "♡ 收藏";
     }
 
-    private void CreateDetailPanel(Transform parent)
+    // ──────────────────── 引用语浮层 ────────────────────
+
+    private void CreateQuoteOverlay(Transform parent)
     {
-        detailPanelObj = NewUI("DetailPanel", parent);
-        var dpr = detailPanelObj.GetComponent<RectTransform>();
-        dpr.anchorMin = new Vector2(1f, 0f); dpr.anchorMax = Vector2.one;
-        dpr.pivot = new Vector2(1f, 0.5f);
-        dpr.sizeDelta = new Vector2(320, 0);
-        var dpi = detailPanelObj.AddComponent<Image>(); dpi.color = new Color(0.12f, 0.12f, 0.12f, 0.95f); dpi.raycastTarget = false;
+        quoteObj = NewUI("Quote", parent);
+        var qr = quoteObj.GetComponent<RectTransform>();
+        qr.anchorMin = qr.anchorMax = new Vector2(0.5f, 0.28f);
+        qr.pivot = new Vector2(0.5f, 0.5f);
+        qr.sizeDelta = new Vector2(500, 50);
+        var qImg = quoteObj.AddComponent<Image>(); qImg.color = new Color(0, 0, 0, 0); qImg.raycastTarget = false;
 
-        // 顶部朱红装饰线
-        var topLine = NewUI("TopLine", detailPanelObj.transform);
-        var tlr = topLine.GetComponent<RectTransform>();
-        tlr.anchorMin = new Vector2(0, 1); tlr.anchorMax = new Vector2(1, 1);
-        tlr.pivot = new Vector2(0.5f, 1f); tlr.sizeDelta = new Vector2(0, 3);
-        var tli = topLine.AddComponent<Image>(); tli.color = ZhuRed; tli.raycastTarget = false;
+        var qtObj = NewUI("T", quoteObj.transform); Stretch(qtObj);
+        quoteText = qtObj.AddComponent<Text>();
+        quoteText.font = Font(); quoteText.fontSize = 15; quoteText.color = OchreBrown;
+        quoteText.alignment = TextAnchor.MiddleCenter;
+        quoteText.lineSpacing = 1.3f;
+    }
 
-        // Tabs
-        string[] tabNames = { "历史背景", "制作工艺", "文化寓意" };
+    // ──────────────────── 底部抽屉面板 ────────────────────
+
+    private void CreateDrawer(Transform parent)
+    {
+        drawerPanel = NewUI("Drawer", parent);
+        drawerRt = drawerPanel.GetComponent<RectTransform>();
+
+        // 锚定屏幕底部，pivot在底边中点
+        drawerRt.anchorMin = new Vector2(0f, 0f);
+        drawerRt.anchorMax = new Vector2(1f, 0f);
+        drawerRt.pivot = new Vector2(0.5f, 0f);
+
+        var bgImg = drawerPanel.AddComponent<Image>();
+        bgImg.color = new Color(DrawerBg.r, DrawerBg.g, DrawerBg.b, 0.97f);
+        bgImg.raycastTarget = true;
+
+        // 顶部分隔线
+        var divLine = NewUI("DivLine", drawerPanel.transform);
+        var dlr = divLine.GetComponent<RectTransform>();
+        dlr.anchorMin = new Vector2(0, 1); dlr.anchorMax = new Vector2(1, 1);
+        dlr.pivot = new Vector2(0.5f, 1f); dlr.sizeDelta = new Vector2(0, 2);
+        var dlImg = divLine.AddComponent<Image>(); dlImg.color = OchreBrown; dlImg.raycastTarget = false;
+
+        // 拉手柄按钮 — 在分隔线下方
+        CreateHandle(drawerPanel.transform);
+        CreateTabBar(drawerPanel.transform);
+        CreateDrawerContent(drawerPanel.transform);
+
+        drawerOpen = false;
+        SetDrawerSize(false, false);
+    }
+
+    private void CreateHandle(Transform parent)
+    {
+        // 拉手柄：位于抽屉最顶部，醒目的棕色圆角按钮
+        handleBtn = NewUI("Handle", parent);
+        var hr = handleBtn.GetComponent<RectTransform>();
+        hr.anchorMin = hr.anchorMax = new Vector2(0.5f, 1f);
+        hr.pivot = new Vector2(0.5f, 1f);
+        hr.sizeDelta = new Vector2(160, 32);
+        hr.anchoredPosition = new Vector2(0, -4);
+        var hBg = handleBtn.AddComponent<Image>();
+        hBg.color = OchreBrown;
+        hBg.raycastTarget = true;
+        handleBtn.AddComponent<Button>().onClick.AddListener(ToggleDrawer);
+        var htObj = NewUI("T", handleBtn.transform); Stretch(htObj);
+        handleText = htObj.AddComponent<Text>();
+        handleText.font = Font(); handleText.fontSize = 14; handleText.color = Color.white;
+        handleText.alignment = TextAnchor.MiddleCenter;
+        handleText.text = "▲  详情  ▲";
+    }
+
+    private void CreateTabBar(Transform parent)
+    {
+        // Tab栏：在拉手柄下方
+        var tabBar = NewUI("TabBar", parent);
+        var tbr = tabBar.GetComponent<RectTransform>();
+        tbr.anchorMin = new Vector2(0, 1); tbr.anchorMax = new Vector2(1, 1);
+        tbr.pivot = new Vector2(0.5f, 1f);
+        tbr.sizeDelta = new Vector2(0, 36);
+        tbr.anchoredPosition = new Vector2(0, -36);
+        var tabBg = tabBar.AddComponent<Image>(); tabBg.color = new Color(0, 0, 0, 0); tabBg.raycastTarget = false;
+
+        var hlg = tabBar.AddComponent<HorizontalLayoutGroup>();
+        hlg.childAlignment = TextAnchor.MiddleCenter;
+        hlg.spacing = 6;
+        hlg.padding = new RectOffset(10, 10, 3, 3);
+        hlg.childForceExpandWidth = true;
+        hlg.childForceExpandHeight = false;
+        hlg.childControlWidth = true;
+        hlg.childControlHeight = true;
+
+        for (int i = 0; i < 3; i++)
+            CreateTabButton(tabBar.transform, i);
+
+        activeTab = 0;
+        UpdateTabStyles();
+    }
+
+    private void CreateTabButton(Transform parent, int idx)
+    {
+        var tab = NewUI($"Tab_{idx}", parent);
+        var le = tab.AddComponent<LayoutElement>();
+        le.preferredHeight = 32;
+
+        var tabImg = tab.AddComponent<Image>();
+        tabImg.color = TabInactiveBg;
+        tabImg.raycastTarget = true;
+
+        var tabBtn = tab.AddComponent<Button>();
+        int capturedIdx = idx;
+        tabBtn.onClick.AddListener(() => OnTabClicked(capturedIdx));
+
+        // 纯文字标签，居中
+        var tObj = NewUI("Label", tab.transform);
+        Stretch(tObj);
+        var tt = tObj.AddComponent<Text>();
+        tt.font = Font(); tt.text = TabTitles[idx]; tt.fontSize = 14; tt.color = InkTitle;
+        tt.alignment = TextAnchor.MiddleCenter;
+
+        tabBtns[idx] = tab;
+        tabTexts[idx] = tt;
+    }
+
+    private void CreateDrawerContent(Transform parent)
+    {
+        drawerContent = NewUI("DrawerContent", parent);
+        var dcr = drawerContent.GetComponent<RectTransform>();
+        dcr.anchorMin = new Vector2(0f, 0f);
+        dcr.anchorMax = new Vector2(1f, 1f);
+        dcr.pivot = new Vector2(0.5f, 0f);
+        dcr.sizeDelta = new Vector2(-12, -78);
+        dcr.anchoredPosition = new Vector2(0, 4);
+
+        var dcBg = drawerContent.AddComponent<Image>();
+        dcBg.color = new Color(1f, 1f, 1f, 0.65f);
+        dcBg.raycastTarget = false;
+
+        // 红色装饰条
+        var redBar = NewUI("RedBar", drawerContent.transform);
+        var rbr = redBar.GetComponent<RectTransform>();
+        rbr.anchorMin = new Vector2(0, 1); rbr.anchorMax = new Vector2(1, 1);
+        rbr.pivot = new Vector2(0.5f, 1f);
+        rbr.sizeDelta = new Vector2(0, 3);
+        var rbImg = redBar.AddComponent<Image>(); rbImg.color = ChinaRed; rbImg.raycastTarget = false;
+
+        // 正文文字
+        var txtObj = NewUI("Text", drawerContent.transform);
+        var txtr = txtObj.GetComponent<RectTransform>();
+        txtr.anchorMin = new Vector2(0.06f, 0.06f);
+        txtr.anchorMax = new Vector2(0.94f, 0.94f);
+        txtr.offsetMin = txtr.offsetMax = Vector2.zero;
+        drawerContentText = txtObj.AddComponent<Text>();
+        drawerContentText.font = Font();
+        drawerContentText.fontSize = 17;
+        drawerContentText.color = InkTitle;
+        drawerContentText.alignment = TextAnchor.UpperLeft;
+        drawerContentText.lineSpacing = 1.6f;
+        drawerContentText.supportRichText = true;
+
+        drawerContent.SetActive(false);
+    }
+
+    // ──────────────────── 抽屉控制 ────────────────────
+
+    private void ToggleDrawer()
+    {
+        if (drawerAnimating) return;
+        drawerOpen = !drawerOpen;
+        StartCoroutine(AnimateDrawer(drawerOpen));
+    }
+
+    private void OnTabClicked(int idx)
+    {
+        activeTab = idx;
+        UpdateTabStyles();
+        UpdateDrawerContent();
+
+        if (!drawerOpen)
+        {
+            drawerOpen = true;
+            StartCoroutine(AnimateDrawer(true));
+        }
+    }
+
+    private System.Collections.IEnumerator AnimateDrawer(bool open)
+    {
+        drawerAnimating = true;
+
+        float fromH = drawerRt.sizeDelta.y;
+        float toH = open ? DrawerOpenHeight() : DrawerCollapsedHeight();
+        float fromY = drawerRt.anchoredPosition.y;
+        float toY = FooterHeight;
+
+        if (open)
+        {
+            drawerContent.SetActive(true);
+            UpdateDrawerContent();
+        }
+
+        // 抽屉展开时隐藏引用语，收起时恢复
+        if (quoteObj != null)
+            quoteObj.SetActive(!open);
+
+        float t = 0;
+        while (t < DrawerAnimDuration)
+        {
+            t += Time.deltaTime;
+            float p = Mathf.Clamp01(t / DrawerAnimDuration);
+            float smoothP = Mathf.SmoothStep(0f, 1f, p);
+            drawerRt.sizeDelta = new Vector2(drawerRt.sizeDelta.x, Mathf.Lerp(fromH, toH, smoothP));
+            drawerRt.anchoredPosition = new Vector2(drawerRt.anchoredPosition.x, Mathf.Lerp(fromY, toY, smoothP));
+            yield return null;
+        }
+
+        drawerRt.sizeDelta = new Vector2(drawerRt.sizeDelta.x, toH);
+        drawerRt.anchoredPosition = new Vector2(drawerRt.anchoredPosition.x, toY);
+
+        if (!open)
+            drawerContent.SetActive(false);
+
+        handleText.text = open ? "▼  收起  ▼" : "▲  详情  ▲";
+
+        drawerAnimating = false;
+    }
+
+    private float DrawerCollapsedHeight() => 80f;  // handle + tab
+
+    private float DrawerOpenHeight() => Screen.height * 0.3f;  // 更紧凑
+
+    private void SetDrawerSize(bool open, bool animate)
+    {
+        if (animate)
+        {
+            StartCoroutine(AnimateDrawer(open));
+            return;
+        }
+
+        float h = open ? DrawerOpenHeight() : DrawerCollapsedHeight();
+        drawerRt.sizeDelta = new Vector2(drawerRt.sizeDelta.x, h);
+        drawerRt.anchoredPosition = new Vector2(drawerRt.anchoredPosition.x, FooterHeight);
+        drawerContent.SetActive(open);
+        if (quoteObj != null) quoteObj.SetActive(!open);
+        handleText.text = open ? "▼  收起  ▼" : "▲  详情  ▲";
+        if (open) UpdateDrawerContent();
+    }
+
+    private void UpdateTabStyles()
+    {
         for (int i = 0; i < 3; i++)
         {
-            var tab = NewUI($"Tab{i}", detailPanelObj.transform);
-            var tr = tab.GetComponent<RectTransform>();
-            tr.anchorMin = new Vector2(i / 3f, 1f); tr.anchorMax = new Vector2((i + 1) / 3f, 1f);
-            tr.pivot = new Vector2(0f, 1f); tr.sizeDelta = new Vector2(0, 38);
-            tab.AddComponent<Image>().color = i == 0 ? ZhuRed : new Color(0.25f, 0.25f, 0.25f);
-            var tb = tab.AddComponent<Button>(); int idx = i; tb.onClick.AddListener(() => SwitchTab(idx));
-            var ttObj = NewUI("T", tab.transform); Stretch(ttObj);
-            var tt = ttObj.AddComponent<Text>();
-            tt.font = Font(); tt.text = tabNames[i]; tt.fontSize = 15; tt.color = Color.white; tt.alignment = TextAnchor.MiddleCenter;
+            if (tabBtns[i] == null) continue;
+            tabBtns[i].GetComponent<Image>().color = (i == activeTab) ? TabActiveBg : TabInactiveBg;
+            if (tabTexts[i] != null)
+                tabTexts[i].color = (i == activeTab) ? ChinaRed : InkTitle;
         }
-
-        // Content
-        var cObj = NewUI("Content", detailPanelObj.transform);
-        var cr = cObj.GetComponent<RectTransform>();
-        cr.anchorMin = Vector2.zero; cr.anchorMax = new Vector2(1f, 1f);
-        cr.offsetMin = new Vector2(12, 12); cr.offsetMax = new Vector2(-12, -48);
-        contentText = cObj.AddComponent<Text>();
-        contentText.font = Font(); contentText.fontSize = 16; contentText.color = XuanPaper;
-        contentText.alignment = TextAnchor.UpperLeft;
     }
 
-    private void SwitchTab(int idx)
+    private void UpdateDrawerContent()
     {
-        currentTab = idx;
-        if (currentExhibit == null) return;
-        for (int i = 0; i < 3; i++)
+        if (drawerContentText == null || currentExhibit == null) return;
+
+        switch (activeTab)
         {
-            var tab = detailPanelObj.transform.Find($"Tab{i}");
-            if (tab != null) tab.GetComponent<Image>().color = i == idx ? ZhuRed : new Color(0.25f, 0.25f, 0.25f);
-        }
-        switch (idx)
-        {
-            case 0: contentText.text = currentExhibit.history; break;
-            case 1: contentText.text = currentExhibit.craft; break;
-            case 2: contentText.text = currentExhibit.meaning; break;
+            case 0: drawerContentText.text = currentExhibit.history; break;
+            case 1: drawerContentText.text = currentExhibit.craft; break;
+            case 2: drawerContentText.text = currentExhibit.meaning; break;
         }
     }
 
-    #region 3D Models
+    // ──────────────────── 底部操作栏 ────────────────────
+
+    private void CreateFooter(Transform parent)
+    {
+        var footer = AnchorBottom("Footer", parent, 55);
+        var fImg = footer.AddComponent<Image>(); fImg.color = new Color(XuanPaperBg.r, XuanPaperBg.g, XuanPaperBg.b, 0.95f); fImg.raycastTarget = false;
+
+        var divLine = NewUI("DivLine", footer.transform);
+        var dlr = divLine.GetComponent<RectTransform>();
+        dlr.anchorMin = new Vector2(0, 1); dlr.anchorMax = new Vector2(1, 1);
+        dlr.pivot = new Vector2(0.5f, 1f); dlr.sizeDelta = new Vector2(0, 2);
+        var dlImg = divLine.AddComponent<Image>(); dlImg.color = OchreBrown; dlImg.raycastTarget = false;
+
+        AddBtnAnchored("PrevBtn", footer.transform, new Vector2(0.2f, 0.5f), new Vector2(130, 40), Vector2.zero, "< 上一个", OchreBrown, 15).onClick.AddListener(ShowPrevious);
+        AddBtnAnchored("CollectBtn2", footer.transform, new Vector2(0.5f, 0.5f), new Vector2(130, 40), Vector2.zero, "收藏", OchreBrown, 15).onClick.AddListener(OnCollectClicked);
+        AddBtnAnchored("NextBtn", footer.transform, new Vector2(0.8f, 0.5f), new Vector2(130, 40), Vector2.zero, "下一个 >", OchreBrown, 15).onClick.AddListener(ShowNext);
+    }
+
+    // ──────────────────── 3D 模型 ────────────────────
 
     private void ShowCurrentExhibit()
     {
@@ -164,27 +445,35 @@ public class ExhibitManager : UIFrame
         if (currentModel != null) Destroy(currentModel);
         if (pedestal != null) Destroy(pedestal);
 
-        // 展台底座
         pedestal = new GameObject("Pedestal");
-        pedestal.transform.position = new Vector3(0, -0.05f, 5);
+        pedestal.transform.position = new Vector3(0, -0.8f, 5);
         var disk = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         disk.transform.SetParent(pedestal.transform, false);
-        disk.transform.localScale = new Vector3(1.8f, 0.05f, 1.8f);
-        disk.GetComponent<Renderer>().material.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+        disk.transform.localScale = new Vector3(2.2f, 0.06f, 2.2f);
+        disk.GetComponent<Renderer>().material.color = PedestalColor;
 
         currentModel = CreateModel(data.modelType, data.id);
         currentModel.AddComponent<ModelRotator>();
-        exhibitNameText.text = data.name;
-        exhibitDescText.text = data.description;
+
+        exhibitNameText.text = data.category + " - " + data.name;
+        quoteText.text = $"\"{data.description}\"";
+
         currentExhibit = data;
-        SwitchTab(0);
+
+        drawerOpen = false;
+        SetDrawerSize(false, false);
+        activeTab = 0;
+        UpdateTabStyles();
+
+        isCollected = BackpackManager.Instance.IsInBackpack(GameManager.Instance.currentUser, data.id);
+        UpdateCollectButton();
     }
 
     private GameObject CreateModel(string type, string id)
     {
         var p = new GameObject($"Exhibit_{id}");
         p.transform.position = new Vector3(0, 0.5f, 5);
-        p.transform.localScale = Vector3.one * 1.5f;
+        p.transform.localScale = Vector3.one * 3f;
         Color c = ModelColors.ContainsKey(type) ? ModelColors[type] : Color.gray;
 
         switch (type)
@@ -244,20 +533,68 @@ public class ExhibitManager : UIFrame
         return obj;
     }
 
-    #endregion
+    // ──────────────────── 导航 ────────────────────
 
     private void ShowPrevious()
-    { if (currentExhibits.Count == 0) return; currentExhibitIndex = (currentExhibitIndex - 1 + currentExhibits.Count) % currentExhibits.Count; ShowCurrentExhibit(); }
+    {
+        if (currentExhibits.Count == 0) return;
+        currentExhibitIndex = (currentExhibitIndex - 1 + currentExhibits.Count) % currentExhibits.Count;
+        ShowCurrentExhibit();
+    }
 
     private void ShowNext()
-    { if (currentExhibits.Count == 0) return; currentExhibitIndex = (currentExhibitIndex + 1) % currentExhibits.Count; ShowCurrentExhibit(); }
+    {
+        if (currentExhibits.Count == 0) return;
+        currentExhibitIndex = (currentExhibitIndex + 1) % currentExhibits.Count;
+        ShowCurrentExhibit();
+    }
+
+    // ──────────────────── 收藏 ────────────────────
 
     private void OnCollectClicked()
     {
-        if (currentExhibits.Count == 0) return;
-        var d = currentExhibits[currentExhibitIndex];
-        bool added = BackpackManager.Instance.AddToBackpack(GameManager.Instance.currentUser, d.id);
-        if (added) ShowToast($"✅ 已收藏「{d.name}」", JadeGreen);
-        else ShowToast($"⚠ 「{d.name}」已在背包中", ZhuRed);
+        if (currentExhibits.Count == 0 || currentExhibit == null) return;
+        string id = currentExhibit.id;
+        if (isCollected)
+        {
+            BackpackManager.Instance.RemoveFromBackpack(GameManager.Instance.currentUser, id);
+            isCollected = false;
+            ShowToast($"已取消收藏「{currentExhibit.name}」", SummaryGray);
+        }
+        else
+        {
+            BackpackManager.Instance.AddToBackpack(GameManager.Instance.currentUser, id);
+            isCollected = true;
+            ShowToast($"✅ 已收藏「{currentExhibit.name}」", JadeGreen);
+            StartCoroutine(HeartbeatAnimation(collectBtn.transform));
+        }
+        UpdateCollectButton();
+    }
+
+    private void UpdateCollectButton()
+    {
+        collectBtnText.text = isCollected ? "❤ 已收藏" : "♡ 收藏";
+        collectBtn.GetComponent<Image>().color = isCollected ? ChinaRed : OchreBrown;
+    }
+
+    private System.Collections.IEnumerator HeartbeatAnimation(Transform target)
+    {
+        Vector3 orig = target.localScale;
+        float duration = 0.2f;
+        float t = 0;
+        while (t < duration * 0.5f)
+        {
+            t += Time.deltaTime;
+            target.localScale = Vector3.Lerp(orig, orig * 1.2f, t / (duration * 0.5f));
+            yield return null;
+        }
+        t = 0;
+        while (t < duration * 0.5f)
+        {
+            t += Time.deltaTime;
+            target.localScale = Vector3.Lerp(orig * 1.2f, orig, t / (duration * 0.5f));
+            yield return null;
+        }
+        target.localScale = orig;
     }
 }

@@ -29,21 +29,22 @@ public class MainPanel : UIFrame
         var root = InitCanvas();
         canvasTRef = canvasT;
 
-        // 淡入
-        var cg = root.gameObject.AddComponent<CanvasGroup>();
-        StartCoroutine(FadeIn(cg, 0.6f));
-
-        // 背景
+        // ── 背景：宣纸底纹 + 水墨晕染 ──
         var bg = NewUI("BG", root);
         Stretch(bg);
-        var bgImg = bg.AddComponent<Image>(); bgImg.color = InkBlack; bgImg.raycastTarget = false;
+        var bgImg = bg.AddComponent<Image>();
+        bgImg.color = new Color(0.96f, 0.90f, 0.78f);  // 宣纸色
+        bgImg.raycastTarget = false;
+
+        // 水墨晕染四角
+        AddInkWashCorners(root);
 
         // ── 顶部标题栏 ──
         var header = AnchorTop("Header", root, 60);
-        header.AddComponent<Image>(); header.GetComponent<Image>().color = DarkBar; header.GetComponent<Image>().raycastTarget = false;
+        var hImg = header.AddComponent<Image>(); hImg.color = DarkBar; hImg.raycastTarget = false;
 
         // 左侧印章小图标
-        AddSealLogo("MiniLogo", header.transform, new Vector2(-200, 0), 36, "遗", 20);
+        AddSealLogo("MiniLogo", header.transform, new Vector2(-220, 0), 34, "遗", 18);
 
         // 标题文字（header 内居中偏左）
         var titleObj = NewUI("Title", header.transform);
@@ -65,23 +66,168 @@ public class MainPanel : UIFrame
         var ut = userObj.AddComponent<Text>();
         ut.font = Font(); ut.text = GameManager.Instance?.currentUser ?? ""; ut.fontSize = 15; ut.color = GoldColor; ut.alignment = TextAnchor.MiddleRight;
 
-        // ── 品类卡片区域 ──
-        var cards = NewUI("Cards", root);
-        var cr = cards.GetComponent<RectTransform>();
-        cr.anchorMin = new Vector2(0, 0.1f); cr.anchorMax = new Vector2(1, 0.92f);
-        cr.offsetMin = cr.offsetMax = Vector2.zero; cr.anchoredPosition = Vector2.zero;
-        cr.sizeDelta = Vector2.zero;
-        cards.AddComponent<Image>(); cards.GetComponent<Image>().color = InkBlack; cards.GetComponent<Image>().raycastTarget = false;
-
-        for (int i = 0; i < 4; i++)
-        {
-            int row = i / 2, col = i % 2;
-            CreateCategoryCard(cards.transform, i, row, col);
-        }
+        // ── 卷轴 ScrollView 区域 ──
+        CreateScrollView(root);
 
         // ── 底部导航栏 ──
-        var nav = AnchorBottom("NavBar", root, 55);
-        nav.AddComponent<Image>(); nav.GetComponent<Image>().color = DarkBar; nav.GetComponent<Image>().raycastTarget = false;
+        CreateNavBar(root);
+
+        // ── 弹窗 ──
+        settingsPanel = MakeOverlay(root, "系统设置",
+            $"音量：{Mathf.RoundToInt(GameManager.Instance.volume * 100)}%\n" +
+            $"亮度：{Mathf.RoundToInt(GameManager.Instance.brightness * 100)}%\n" +
+            "主题风格：" + GameManager.Instance.themeStyle + "\n\n" +
+            "所有设置已通过 GameManager 保存\n点击「保存设置」按钮应用变更", GoldColor);
+        helpPanel = MakeOverlay(root, "帮助",
+            "1. 选择品类卡片浏览展品\n2. 拖拽旋转3D模型\n3. 查看展品详细信息\n4. 收藏感兴趣的展品\n5. 在背包中管理收藏", ZhuRed);
+    }
+
+    // ──────────────────── 卷轴 ScrollView ────────────────────
+
+    private void CreateScrollView(Transform parent)
+    {
+        // ScrollView 容器 — 占据标题栏和导航栏之间的区域
+        var scrollObj = NewUI("ScrollView", parent);
+        var sr = scrollObj.GetComponent<RectTransform>();
+        sr.anchorMin = new Vector2(0.05f, 0.12f);
+        sr.anchorMax = new Vector2(0.95f, 0.88f);
+        sr.sizeDelta = Vector2.zero;
+        var sImg = scrollObj.AddComponent<Image>(); sImg.color = new Color(0, 0, 0, 0); sImg.raycastTarget = false;
+        var scrollRect = scrollObj.AddComponent<ScrollRect>();
+
+// Viewport — 需要 Image 组件让 Mask 裁剪正常工作
+        var viewport = NewUI("Viewport", scrollObj.transform);
+        Stretch(viewport);
+        var vpImg = viewport.AddComponent<Image>();
+        vpImg.color = new Color(1, 1, 1, 1);  // 白色底（为 Mask 提供裁剪区域）
+        vpImg.raycastTarget = false;
+        var mask = viewport.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+
+        // Content
+        var content = NewUI("Content", viewport.transform);
+        var cr = content.GetComponent<RectTransform>();
+        cr.anchorMin = new Vector2(0, 0.5f);
+        cr.anchorMax = new Vector2(0, 0.5f);
+        cr.pivot = new Vector2(0, 0.5f);
+        cr.sizeDelta = new Vector2(0, 380);  // 高度
+        var cImg = content.AddComponent<Image>(); cImg.color = new Color(0, 0, 0, 0); cImg.raycastTarget = false;
+        // 水平排列
+        var hlg = content.AddComponent<HorizontalLayoutGroup>();
+        hlg.childAlignment = TextAnchor.MiddleCenter;
+        hlg.spacing = 18;
+        hlg.padding = new RectOffset(25, 25, 0, 0);
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = false;
+        // 自动计算宽度
+        var csf = content.AddComponent<ContentSizeFitter>();
+        csf.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        scrollRect.content = content.GetComponent<RectTransform>();
+        scrollRect.viewport = viewport.GetComponent<RectTransform>();
+        scrollRect.horizontal = true;
+        scrollRect.vertical = false;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.inertia = true;
+        scrollRect.decelerationRate = 0.1f;
+
+        // ── 创建 4 张卡片 ──
+        for (int i = 0; i < 4; i++)
+        {
+            CreateScrollCard(content.transform, i);
+        }
+    }
+
+    private void CreateScrollCard(Transform parent, int idx)
+    {
+        string cat = Categories[idx];
+
+        // 外层：绫布边框（淡灰装裱边框）
+        var outer = NewUI($"CardOuter_{cat}", parent);
+        var le = outer.AddComponent<LayoutElement>();
+        le.preferredWidth = 220;
+        le.preferredHeight = 320;
+        var or = outer.GetComponent<RectTransform>();
+        // 淡灰边框色
+        var outImg = outer.AddComponent<Image>();
+        outImg.color = new Color(0.82f, 0.80f, 0.72f);  // 绫布色
+        outImg.raycastTarget = false;
+
+        // 内层：宣纸白底（margin 效果）
+        var inner = NewUI("CardInner", outer.transform);
+        var ir = inner.GetComponent<RectTransform>();
+        ir.anchorMin = new Vector2(0.04f, 0.04f);
+        ir.anchorMax = new Vector2(0.96f, 0.96f);
+        ir.offsetMin = ir.offsetMax = Vector2.zero;
+        var inImg = inner.AddComponent<Image>();
+        inImg.color = XuanPaper;
+        inImg.raycastTarget = false;
+
+        // 印章图标（品类字）
+        AddSealIcon("Icon", inner.transform, new Vector2(0.5f, 0.72f), 32, CategoryIcons[idx], 28);
+
+        // 品类名
+        var nameObj = NewUI("Name", inner.transform);
+        var nr = nameObj.GetComponent<RectTransform>();
+        nr.anchorMin = nr.anchorMax = new Vector2(0.5f, 0.42f);
+        nr.sizeDelta = new Vector2(180, 32);
+        var nm = nameObj.AddComponent<Text>();
+        nm.font = Font(); nm.text = cat; nm.fontSize = 24; nm.color = CategoryColors[idx]; nm.alignment = TextAnchor.MiddleCenter;
+
+        // 描述
+        var descObj = NewUI("Desc", inner.transform);
+        var dr = descObj.GetComponent<RectTransform>();
+        dr.anchorMin = dr.anchorMax = new Vector2(0.5f, 0.25f);
+        dr.sizeDelta = new Vector2(190, 22);
+        var dt = descObj.AddComponent<Text>();
+        dt.font = Font(); dt.text = CategoryDescs[idx]; dt.fontSize = 14; dt.color = new Color(0.35f, 0.35f, 0.35f); dt.alignment = TextAnchor.MiddleCenter;
+
+        // 按钮（整张卡片可点击）
+        var btn = outer.AddComponent<Button>();
+        btn.onClick.AddListener(() => OnCardClicked(cat, outer.transform));
+    }
+
+    private void OnCardClicked(string category, Transform cardTransform)
+    {
+        // 点击反馈：放大弹回
+        StartCoroutine(CardClickFeedback(cardTransform));
+        // 跳转
+        PlayerPrefs.SetString("CurrentCategory", category);
+        PlayerPrefs.Save();
+        SceneLoader.Instance.LoadScene(SceneNames.Exhibit);
+    }
+
+    private System.Collections.IEnumerator CardClickFeedback(Transform card)
+    {
+        Vector3 orig = card.localScale;
+        Vector3 target = orig * 1.05f;
+        float duration = 0.12f;
+
+        // 放大
+        float t = 0;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            card.localScale = Vector3.Lerp(orig, target, Mathf.Clamp01(t / duration));
+            yield return null;
+        }
+        // 弹回
+        t = 0;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            card.localScale = Vector3.Lerp(target, orig, Mathf.Clamp01(t / duration));
+            yield return null;
+        }
+        card.localScale = orig;
+    }
+
+    // ──────────────────── 底部导航栏 ────────────────────
+
+    private void CreateNavBar(Transform parent)
+    {
+        var nav = AnchorBottom("NavBar", parent, 55);
+        var nImg = nav.AddComponent<Image>(); nImg.color = DarkBar; nImg.raycastTarget = false;
 
         string[] navNames = { "背包", "设置", "帮助", "退出" };
         Color[] navColors = { JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
@@ -103,56 +249,6 @@ public class MainPanel : UIFrame
             var nt = to.AddComponent<Text>();
             nt.font = Font(); nt.text = navNames[i]; nt.fontSize = 18; nt.color = Color.white; nt.alignment = TextAnchor.MiddleCenter;
         }
-
-        // ── 弹窗 ──
-        settingsPanel = MakeOverlay(root, "系统设置",
-            $"音量：{Mathf.RoundToInt(GameManager.Instance.volume * 100)}%\n" +
-            $"亮度：{Mathf.RoundToInt(GameManager.Instance.brightness * 100)}%\n" +
-            "主题风格：" + GameManager.Instance.themeStyle + "\n\n" +
-            "所有设置已通过 GameManager 保存\n点击「保存设置」按钮应用变更", GoldColor);
-        helpPanel = MakeOverlay(root, "帮助",
-            "1. 选择品类卡片浏览展品\n2. 拖拽旋转3D模型\n3. 查看展品详细信息\n4. 收藏感兴趣的展品\n5. 在背包中管理收藏", ZhuRed);
-    }
-
-    private void CreateCategoryCard(Transform parent, int idx, int row, int col)
-    {
-        var card = NewUI($"Card_{Categories[idx]}", parent);
-        var cr = card.GetComponent<RectTransform>();
-        cr.anchorMin = new Vector2(col * 0.5f, 0.5f - row * 0.5f);
-        cr.anchorMax = new Vector2((col + 1) * 0.5f, 1f - row * 0.5f);
-        cr.offsetMin = new Vector2(10, 10 + row * 10);
-        cr.offsetMax = new Vector2(-10 - col * 10, -10 - row * 10);
-        card.AddComponent<Image>().color = CategoryColors[idx];
-
-        var btn = card.AddComponent<Button>();
-        string cat = Categories[idx];
-        btn.onClick.AddListener(() => OnCategoryClicked(cat));
-
-        // 印章风品类图标
-        AddSealIcon("Icon", card.transform, new Vector2(0.5f, 0.7f), 35, CategoryIcons[idx], 30);
-
-        // 品类名
-        var nameObj = NewUI("Name", card.transform);
-        var nr = nameObj.GetComponent<RectTransform>();
-        nr.anchorMin = nr.anchorMax = new Vector2(0.5f, 0.3f);
-        nr.sizeDelta = new Vector2(200, 35);
-        var nm = nameObj.AddComponent<Text>();
-        nm.font = Font(); nm.text = Categories[idx]; nm.fontSize = 26; nm.color = Color.white; nm.alignment = TextAnchor.MiddleCenter;
-
-        // 描述
-        var descObj = NewUI("Desc", card.transform);
-        var dr = descObj.GetComponent<RectTransform>();
-        dr.anchorMin = dr.anchorMax = new Vector2(0.5f, 0.15f);
-        dr.sizeDelta = new Vector2(250, 25);
-        var dt = descObj.AddComponent<Text>();
-        dt.font = Font(); dt.text = CategoryDescs[idx]; dt.fontSize = 14; dt.color = new Color(1, 1, 1, 0.8f); dt.alignment = TextAnchor.MiddleCenter;
-    }
-
-    private void OnCategoryClicked(string cat)
-    {
-        PlayerPrefs.SetString("CurrentCategory", cat);
-        PlayerPrefs.Save();
-        SceneLoader.Instance.LoadScene(SceneNames.Exhibit);
     }
 
     private void TogglePanel(GameObject p) { if (p != null) p.SetActive(!p.activeSelf); }
