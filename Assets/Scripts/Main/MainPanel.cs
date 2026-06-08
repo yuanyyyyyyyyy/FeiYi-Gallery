@@ -224,31 +224,92 @@ public class MainPanel : UIFrame
 
     // ──────────────────── 底部导航栏 ────────────────────
 
+    // 竹简色系
+    private static readonly Color BambooDark  = new Color(0.35f, 0.25f, 0.15f);   // 深竹棕
+    private static readonly Color BambooLight = new Color(0.55f, 0.42f, 0.28f);   // 浅竹棕
+    private static readonly Color BambooGloss = new Color(0.68f, 0.55f, 0.38f);   // 竹光面
+    private static readonly Color BambooTwine = new Color(0.45f, 0.32f, 0.18f);   // 麻绳色
+
     private void CreateNavBar(Transform parent)
     {
-        var nav = AnchorBottom("NavBar", parent, 55);
-        var nImg = nav.AddComponent<Image>(); nImg.color = DarkBar; nImg.raycastTarget = false;
+        // 竹简底栏 — 整体深棕底
+        var nav = AnchorBottom("NavBar", parent, 52);
+        var nImg = nav.AddComponent<Image>(); nImg.color = BambooDark; nImg.raycastTarget = false;
+
+        // 上下朱红细线（竹简端头装饰）
+        AddBambooEdgeLines(nav);
 
         string[] navNames = { "背包", "设置", "帮助", "退出" };
-        Color[] navColors = { JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
+        Color[] navAccents = { JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
         System.Action[] navActions = {
             () => { if (backpackPanel == null) { CreateBackpackPanel(); return; } backpackPanel.SetActive(!backpackPanel.activeSelf); },
             () => TogglePanel(settingsPanel),
             () => TogglePanel(helpPanel),
             () => { GameManager.Instance.Logout(); SceneLoader.Instance.LoadScene(SceneNames.Login); }
         };
+
         for (int i = 0; i < 4; i++)
         {
+            // 每个竹简片
             var bo = NewUI($"Nav_{navNames[i]}", nav.transform);
             var br = bo.GetComponent<RectTransform>();
             br.anchorMin = new Vector2(i * 0.25f, 0); br.anchorMax = new Vector2((i + 1) * 0.25f, 1);
             br.sizeDelta = Vector2.zero;
-            bo.AddComponent<Image>().color = navColors[i];
+
+            // 竹片底色：中间亮两侧暗（模拟竹片弧面反光）
+            var bImg = bo.AddComponent<Image>();
+            bImg.color = BambooGloss; bImg.raycastTarget = true;
+
+            // 竹片左侧深色竖边（模拟竹节缝隙）
+            if (i > 0)
+            {
+                var divider = NewUI($"Divider_{i}", nav.transform);
+                var dr = divider.GetComponent<RectTransform>();
+                dr.anchorMin = new Vector2(i * 0.25f, 0.1f);
+                dr.anchorMax = new Vector2(i * 0.25f, 0.9f);
+                dr.sizeDelta = new Vector2(2, 0);
+                var dImg = divider.AddComponent<Image>();
+                dImg.color = BambooTwine; dImg.raycastTarget = false;
+            }
+
             var nb = bo.AddComponent<Button>(); int idx = i; nb.onClick.AddListener(() => navActions[idx]());
+
+            // 顶部小圆点指示器（各按钮的主题色）
+            var dot = NewUI("Dot", bo.transform);
+            var dotR = dot.GetComponent<RectTransform>();
+            dotR.anchorMin = dotR.anchorMax = new Vector2(0.5f, 1f);
+            dotR.pivot = new Vector2(0.5f, 1f);
+            dotR.sizeDelta = new Vector2(6, 6);
+            dotR.anchoredPosition = new Vector2(0, -4);
+            var dotImg = dot.AddComponent<Image>(); dotImg.color = navAccents[i]; dotImg.raycastTarget = false;
+
+            // 文字
             var to = NewUI("T", bo.transform); Stretch(to);
             var nt = to.AddComponent<Text>();
-            nt.font = Font(); nt.text = navNames[i]; nt.fontSize = 18; nt.color = Color.white; nt.alignment = TextAnchor.MiddleCenter;
+            nt.font = Font(); nt.text = navNames[i]; nt.fontSize = 16; nt.color = InkBlack; nt.alignment = TextAnchor.MiddleCenter;
         }
+    }
+
+    /// <summary>
+    /// 竹简端头朱红装饰线
+    /// </summary>
+    private void AddBambooEdgeLines(GameObject nav)
+    {
+        // 上线
+        var top = NewUI("TopEdge", nav.transform);
+        var tr = top.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0, 1); tr.anchorMax = new Vector2(1, 1);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.sizeDelta = new Vector2(0, 2);
+        var tImg = top.AddComponent<Image>(); tImg.color = ZhuRed; tImg.raycastTarget = false;
+
+        // 下线
+        var bot = NewUI("BotEdge", nav.transform);
+        var br = bot.GetComponent<RectTransform>();
+        br.anchorMin = new Vector2(0, 0); br.anchorMax = new Vector2(1, 0);
+        br.pivot = new Vector2(0.5f, 0f);
+        br.sizeDelta = new Vector2(0, 2);
+        var bImg = bot.AddComponent<Image>(); bImg.color = ZhuRed; bImg.raycastTarget = false;
     }
 
     private void TogglePanel(GameObject p) { if (p != null) p.SetActive(!p.activeSelf); }
