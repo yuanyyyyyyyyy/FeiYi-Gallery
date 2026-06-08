@@ -148,10 +148,10 @@ public class MainPanel : UIFrame
         le.preferredWidth = 220;
         le.preferredHeight = 320;
         var or = outer.GetComponent<RectTransform>();
-        // 淡灰边框色
+        // 淡灰边框色 — raycastTarget 必须为 true，Button 才能接收点击
         var outImg = outer.AddComponent<Image>();
         outImg.color = new Color(0.82f, 0.80f, 0.72f);  // 绫布色
-        outImg.raycastTarget = false;
+        outImg.raycastTarget = true;
 
         // 内层：宣纸白底（margin 效果）
         var inner = NewUI("CardInner", outer.transform);
