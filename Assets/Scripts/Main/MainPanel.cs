@@ -92,7 +92,7 @@ public class MainPanel : UIFrame
         sr.anchorMin = new Vector2(0.05f, 0.12f);
         sr.anchorMax = new Vector2(0.95f, 0.88f);
         sr.sizeDelta = Vector2.zero;
-        var sImg = scrollObj.AddComponent<Image>(); sImg.color = new Color(0, 0, 0, 0); sImg.raycastTarget = false;
+        var sImg = scrollObj.AddComponent<Image>(); sImg.color = new Color(0, 0, 0, 0); sImg.raycastTarget = true;
         var scrollRect = scrollObj.AddComponent<ScrollRect>();
 
 // Viewport — 需要 Image 组件让 Mask 裁剪正常工作

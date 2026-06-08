@@ -44,8 +44,10 @@ public abstract class UIFrame : MonoBehaviour
         if (FindObjectOfType<EventSystem>() == null)
         {
             var es = new GameObject("EventSystem");
-            es.AddComponent<EventSystem>();
+            var eventSys = es.AddComponent<EventSystem>();
             es.AddComponent<StandaloneInputModule>();
+            // 降低拖拽阈值，让短距离拖拽更容易被识别
+            eventSys.pixelDragThreshold = 5;
         }
 
         // 全屏 Root 面板 — 所有 UI 元素的父级
