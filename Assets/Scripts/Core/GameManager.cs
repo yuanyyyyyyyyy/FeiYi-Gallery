@@ -36,6 +36,18 @@ public class GameManager : MonoBehaviour
     public ExhibitDataList exhibitDataList;
     private Dictionary<string, ExhibitData> exhibitDict;
 
+    [Header("知识数据")]
+    public KnowledgeDataList knowledgeDataList;
+    private Dictionary<string, KnowledgeItem> knowledgeDict;
+
+    [Header("问答数据")]
+    public QuizDataList quizDataList;
+    private Dictionary<string, QuizQuestion> quizDict;
+
+    [Header("事件数据")]
+    public EventDataList eventDataList;
+    private Dictionary<string, EventItem> eventDict;
+
     private void Awake()
     {
         if (_instance != null && _instance != this)
@@ -48,6 +60,9 @@ public class GameManager : MonoBehaviour
 
         LoadSettings();
         LoadExhibitData();
+        LoadKnowledgeData();
+        LoadQuizData();
+        LoadEventData();
     }
 
     /// <summary>
@@ -146,6 +161,132 @@ public class GameManager : MonoBehaviour
         SaveSettings();
         currentUser = "";
         isLoggedIn = false;
+    }
+
+    /// <summary>
+    /// 加载知识数据
+    /// </summary>
+    private void LoadKnowledgeData()
+    {
+        string path = System.IO.Path.Combine(Application.streamingAssetsPath, "Knowledge.json");
+        if (System.IO.File.Exists(path))
+        {
+            string json = System.IO.File.ReadAllText(path);
+            knowledgeDataList = JsonUtility.FromJson<KnowledgeDataList>(json);
+        }
+        else
+        {
+            Debug.LogWarning("Knowledge.json not found, using empty list.");
+            knowledgeDataList = new KnowledgeDataList { knowledge = new List<KnowledgeItem>() };
+        }
+
+        knowledgeDict = new Dictionary<string, KnowledgeItem>();
+        if (knowledgeDataList.knowledge != null)
+        {
+            foreach (var item in knowledgeDataList.knowledge)
+                knowledgeDict[item.id] = item;
+        }
+    }
+
+    /// <summary>
+    /// 加载问答数据
+    /// </summary>
+    private void LoadQuizData()
+    {
+        string path = System.IO.Path.Combine(Application.streamingAssetsPath, "Quiz.json");
+        if (System.IO.File.Exists(path))
+        {
+            string json = System.IO.File.ReadAllText(path);
+            quizDataList = JsonUtility.FromJson<QuizDataList>(json);
+        }
+        else
+        {
+            Debug.LogWarning("Quiz.json not found, using empty list.");
+            quizDataList = new QuizDataList { quizzes = new List<QuizQuestion>() };
+        }
+
+        quizDict = new Dictionary<string, QuizQuestion>();
+        if (quizDataList.quizzes != null)
+        {
+            foreach (var q in quizDataList.quizzes)
+                quizDict[q.id] = q;
+        }
+    }
+
+    /// <summary>
+    /// 获取某个品类的所有知识卡片
+    /// </summary>
+    public List<KnowledgeItem> GetKnowledgeByCategory(string category)
+    {
+        var result = new List<KnowledgeItem>();
+        if (knowledgeDataList?.knowledge != null)
+        {
+            foreach (var k in knowledgeDataList.knowledge)
+            {
+                if (k.category == category)
+                    result.Add(k);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 获取某个品类的所有问答题目
+    /// </summary>
+    public List<QuizQuestion> GetQuizByCategory(string category)
+    {
+        var result = new List<QuizQuestion>();
+        if (quizDataList?.quizzes != null)
+        {
+            foreach (var q in quizDataList.quizzes)
+            {
+                if (q.category == category)
+                    result.Add(q);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// 加载事件数据
+    /// </summary>
+    private void LoadEventData()
+    {
+        string path = System.IO.Path.Combine(Application.streamingAssetsPath, "Events.json");
+        if (System.IO.File.Exists(path))
+        {
+            string json = System.IO.File.ReadAllText(path);
+            eventDataList = JsonUtility.FromJson<EventDataList>(json);
+        }
+        else
+        {
+            Debug.LogWarning("Events.json not found, using empty list.");
+            eventDataList = new EventDataList { events = new List<EventItem>() };
+        }
+
+        eventDict = new Dictionary<string, EventItem>();
+        if (eventDataList.events != null)
+        {
+            foreach (var e in eventDataList.events)
+                eventDict[e.id] = e;
+        }
+    }
+
+    /// <summary>
+    /// 获取某个品类的所有事件
+    /// </summary>
+    public List<EventItem> GetEventsByCategory(string category)
+    {
+        var result = new List<EventItem>();
+        if (eventDataList?.events != null)
+        {
+            foreach (var e in eventDataList.events)
+            {
+                if (e.category == category)
+                    result.Add(e);
+            }
+        }
+        return result;
     }
 
     /// <summary>

@@ -20,6 +20,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SettingsScene.scene
     guid: eab079ec9c44f56438e786e5220f839c
+  - enabled: 1
+    path: Assets/Scenes/KnowledgeScene.scene
+    guid: 8f761e58b1eeac044b264703164d9fdc
   m_BuildProfiles: []
   m_configObjects: {}
   m_SlimFeaturesWeixinMiniGame:

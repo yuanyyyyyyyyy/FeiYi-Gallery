@@ -43,15 +43,23 @@ public class MainPanel : UIFrame
         var header = AnchorTop("Header", root, 60);
         var hImg = header.AddComponent<Image>(); hImg.color = DarkBar; hImg.raycastTarget = false;
 
-        // 左侧印章小图标
-        AddSealLogo("MiniLogo", header.transform, new Vector2(-220, 0), 34, "遗", 18);
+        // 标题组：印章+文字，整体居中
+        var titleGroup = NewUI("TitleGroup", header.transform);
+        var tgr = titleGroup.GetComponent<RectTransform>();
+        tgr.anchorMin = tgr.anchorMax = new Vector2(0.5f, 0.5f);
+        tgr.pivot = new Vector2(0.5f, 0.5f);
+        tgr.sizeDelta = new Vector2(300, 40);
+        tgr.anchoredPosition = Vector2.zero;
 
-        // 标题文字（header 内居中偏左）
-        var titleObj = NewUI("Title", header.transform);
+        // 左侧印章小图标（组内偏左）
+        AddSealLogo("MiniLogo", titleGroup.transform, new Vector2(-110, 0), 34, "遗", 18);
+
+        // 标题文字（组内偏右）
+        var titleObj = NewUI("Title", titleGroup.transform);
         var tr = titleObj.GetComponent<RectTransform>();
         tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 0.5f);
         tr.pivot = new Vector2(0.5f, 0.5f);
-        tr.sizeDelta = new Vector2(300, 35);
+        tr.sizeDelta = new Vector2(260, 35);
         tr.anchoredPosition = new Vector2(20, 0);
         var tt = titleObj.AddComponent<Text>();
         tt.font = Font(); tt.text = "了不起的非遗"; tt.fontSize = 26; tt.color = ZhuRed; tt.alignment = TextAnchor.MiddleCenter;
@@ -239,21 +247,23 @@ public class MainPanel : UIFrame
         // 上下朱红细线（竹简端头装饰）
         AddBambooEdgeLines(nav);
 
-        string[] navNames = { "背包", "设置", "帮助", "退出" };
-        Color[] navAccents = { JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
+        string[] navNames = { "知识", "故事", "背包", "设置", "帮助", "退出" };
+        Color[] navAccents = { JadeGreen, new Color(0.72f, 0.53f, 0.19f), JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
         System.Action[] navActions = {
+            () => SceneLoader.Instance.LoadScene(SceneNames.Knowledge),
+            () => SceneLoader.Instance.LoadScene(SceneNames.Event),
             () => { if (backpackPanel == null) { CreateBackpackPanel(); return; } backpackPanel.SetActive(!backpackPanel.activeSelf); },
             () => TogglePanel(settingsPanel),
             () => TogglePanel(helpPanel),
             () => { GameManager.Instance.Logout(); SceneLoader.Instance.LoadScene(SceneNames.Login); }
         };
 
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 6; i++)
         {
             // 每个竹简片
             var bo = NewUI($"Nav_{navNames[i]}", nav.transform);
             var br = bo.GetComponent<RectTransform>();
-            br.anchorMin = new Vector2(i * 0.25f, 0); br.anchorMax = new Vector2((i + 1) * 0.25f, 1);
+            br.anchorMin = new Vector2(i / 6f, 0); br.anchorMax = new Vector2((i + 1) / 6f, 1);
             br.sizeDelta = Vector2.zero;
 
             // 竹片底色：中间亮两侧暗（模拟竹片弧面反光）
@@ -265,8 +275,8 @@ public class MainPanel : UIFrame
             {
                 var divider = NewUI($"Divider_{i}", nav.transform);
                 var dr = divider.GetComponent<RectTransform>();
-                dr.anchorMin = new Vector2(i * 0.25f, 0.1f);
-                dr.anchorMax = new Vector2(i * 0.25f, 0.9f);
+                dr.anchorMin = new Vector2(i * 0.2f, 0.1f);
+                dr.anchorMax = new Vector2(i * 0.2f, 0.9f);
                 dr.sizeDelta = new Vector2(2, 0);
                 var dImg = divider.AddComponent<Image>();
                 dImg.color = BambooTwine; dImg.raycastTarget = false;
