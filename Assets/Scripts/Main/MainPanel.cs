@@ -40,6 +40,31 @@ public class MainPanel : UIFrame
         AddInkWashCorners(root);
 
         // ── 顶部标题栏 ──
+        CreateHeader(root);
+
+        // ── 卷轴 ScrollView 区域 ──
+        CreateScrollView(root);
+
+        // ── 功能入口：知识探索 + 历史故事 ──
+        CreateFeatureEntry(root);
+
+        // ── 底部导航栏（4项：背包/设置/帮助/退出）──
+        CreateNavBar(root);
+
+        // ── 弹窗 ──
+        settingsPanel = MakeOverlay(root, "系统设置",
+            $"音量：{Mathf.RoundToInt(GameManager.Instance.volume * 100)}%\n" +
+            $"亮度：{Mathf.RoundToInt(GameManager.Instance.brightness * 100)}%\n" +
+            "主题风格：" + GameManager.Instance.themeStyle + "\n\n" +
+            "所有设置已通过 GameManager 保存\n点击「保存设置」按钮应用变更", GoldColor);
+        helpPanel = MakeOverlay(root, "帮助",
+            "1. 选择品类卡片浏览展品\n2. 拖拽旋转3D模型\n3. 查看展品详细信息\n4. 收藏感兴趣的展品\n5. 在背包中管理收藏\n6. 知识探索学习文化\n7. 历史故事了解传承", ZhuRed);
+    }
+
+    // ──────────────────── 顶部标题栏 ────────────────────
+
+    private void CreateHeader(Transform root)
+    {
         var header = AnchorTop("Header", root, 60);
         var hImg = header.AddComponent<Image>(); hImg.color = DarkBar; hImg.raycastTarget = false;
 
@@ -73,21 +98,61 @@ public class MainPanel : UIFrame
         ur.anchoredPosition = new Vector2(-15, 0);
         var ut = userObj.AddComponent<Text>();
         ut.font = Font(); ut.text = GameManager.Instance?.currentUser ?? ""; ut.fontSize = 15; ut.color = GoldColor; ut.alignment = TextAnchor.MiddleRight;
+    }
 
-        // ── 卷轴 ScrollView 区域 ──
-        CreateScrollView(root);
+    // ──────────────────── 功能入口区 ────────────────────
 
-        // ── 底部导航栏 ──
-        CreateNavBar(root);
+    private void CreateFeatureEntry(Transform parent)
+    {
+        // 功能入口容器 — 在 ScrollView 和 NavBar 之间
+        var entryBar = NewUI("FeatureEntry", parent);
+        var er = entryBar.GetComponent<RectTransform>();
+        er.anchorMin = new Vector2(0.15f, 0.14f);
+        er.anchorMax = new Vector2(0.85f, 0.24f);
+        er.offsetMin = er.offsetMax = Vector2.zero;
+        var eImg = entryBar.AddComponent<Image>();
+        eImg.color = new Color(0, 0, 0, 0);
+        eImg.raycastTarget = false;
 
-        // ── 弹窗 ──
-        settingsPanel = MakeOverlay(root, "系统设置",
-            $"音量：{Mathf.RoundToInt(GameManager.Instance.volume * 100)}%\n" +
-            $"亮度：{Mathf.RoundToInt(GameManager.Instance.brightness * 100)}%\n" +
-            "主题风格：" + GameManager.Instance.themeStyle + "\n\n" +
-            "所有设置已通过 GameManager 保存\n点击「保存设置」按钮应用变更", GoldColor);
-        helpPanel = MakeOverlay(root, "帮助",
-            "1. 选择品类卡片浏览展品\n2. 拖拽旋转3D模型\n3. 查看展品详细信息\n4. 收藏感兴趣的展品\n5. 在背包中管理收藏", ZhuRed);
+        // 左侧：知识探索 小标签按钮
+        var knowBtn = NewUI("KnowBtn", entryBar.transform);
+        var kr = knowBtn.GetComponent<RectTransform>();
+        kr.anchorMin = new Vector2(0, 0.1f);
+        kr.anchorMax = new Vector2(0.47f, 0.9f);
+        kr.offsetMin = kr.offsetMax = Vector2.zero;
+        knowBtn.AddComponent<Image>().color = new Color(0.96f, 0.92f, 0.88f);
+        var kBtn = knowBtn.AddComponent<Button>();
+        kBtn.onClick.AddListener(() => SceneLoader.Instance.LoadScene(SceneNames.Knowledge));
+        // 印章小图标
+        AddSealIcon("KIcon", knowBtn.transform, new Vector2(0.18f, 0.5f), 16, "知", 13);
+        // 文字
+        var kLabel = NewUI("KLabel", knowBtn.transform);
+        var klR = kLabel.GetComponent<RectTransform>();
+        klR.anchorMin = new Vector2(0.32f, 0);
+        klR.anchorMax = new Vector2(0.95f, 1f);
+        klR.offsetMin = klR.offsetMax = Vector2.zero;
+        var kTxt = kLabel.AddComponent<Text>();
+        kTxt.font = Font(); kTxt.text = "知识探索"; kTxt.fontSize = 15; kTxt.color = ZhuRed; kTxt.alignment = TextAnchor.MiddleLeft;
+
+        // 右侧：历史故事 小标签按钮
+        var evtBtn = NewUI("EvtBtn", entryBar.transform);
+        var evr = evtBtn.GetComponent<RectTransform>();
+        evr.anchorMin = new Vector2(0.53f, 0.1f);
+        evr.anchorMax = new Vector2(1f, 0.9f);
+        evr.offsetMin = evr.offsetMax = Vector2.zero;
+        evtBtn.AddComponent<Image>().color = new Color(0.96f, 0.92f, 0.88f);
+        var eBtn = evtBtn.AddComponent<Button>();
+        eBtn.onClick.AddListener(() => SceneLoader.Instance.LoadScene(SceneNames.Event));
+        // 印章小图标
+        AddSealIcon("EIcon", evtBtn.transform, new Vector2(0.18f, 0.5f), 16, "史", 13);
+        // 文字
+        var eLabel = NewUI("ELabel", evtBtn.transform);
+        var elR = eLabel.GetComponent<RectTransform>();
+        elR.anchorMin = new Vector2(0.32f, 0);
+        elR.anchorMax = new Vector2(0.95f, 1f);
+        elR.offsetMin = elR.offsetMax = Vector2.zero;
+        var eTxt = eLabel.AddComponent<Text>();
+        eTxt.font = Font(); eTxt.text = "历史故事"; eTxt.fontSize = 15; eTxt.color = new Color(0.55f, 0.38f, 0.18f); eTxt.alignment = TextAnchor.MiddleLeft;
     }
 
     // ──────────────────── 卷轴 ScrollView ────────────────────
@@ -97,7 +162,7 @@ public class MainPanel : UIFrame
         // ScrollView 容器 — 占据标题栏和导航栏之间的区域
         var scrollObj = NewUI("ScrollView", parent);
         var sr = scrollObj.GetComponent<RectTransform>();
-        sr.anchorMin = new Vector2(0.05f, 0.12f);
+        sr.anchorMin = new Vector2(0.05f, 0.26f);
         sr.anchorMax = new Vector2(0.95f, 0.88f);
         sr.sizeDelta = Vector2.zero;
         var sImg = scrollObj.AddComponent<Image>(); sImg.color = new Color(0, 0, 0, 0); sImg.raycastTarget = true;
@@ -171,8 +236,9 @@ public class MainPanel : UIFrame
         inImg.color = XuanPaper;
         inImg.raycastTarget = false;
 
-        // 印章图标（品类字）
-        AddSealIcon("Icon", inner.transform, new Vector2(0.5f, 0.72f), 32, CategoryIcons[idx], 28);
+        // 印章图标（品类字）— 使用品类对应颜色
+        var sealObj = AddSealIcon("Icon", inner.transform, new Vector2(0.5f, 0.72f), 32, CategoryIcons[idx], 28);
+        sealObj.GetComponent<Image>().color = CategoryColors[idx];
 
         // 品类名
         var nameObj = NewUI("Name", inner.transform);
@@ -247,23 +313,21 @@ public class MainPanel : UIFrame
         // 上下朱红细线（竹简端头装饰）
         AddBambooEdgeLines(nav);
 
-        string[] navNames = { "知识", "故事", "背包", "设置", "帮助", "退出" };
-        Color[] navAccents = { JadeGreen, new Color(0.72f, 0.53f, 0.19f), JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
+        string[] navNames = { "背包", "设置", "帮助", "退出" };
+        Color[] navAccents = { JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
         System.Action[] navActions = {
-            () => SceneLoader.Instance.LoadScene(SceneNames.Knowledge),
-            () => SceneLoader.Instance.LoadScene(SceneNames.Event),
             () => { if (backpackPanel == null) { CreateBackpackPanel(); return; } backpackPanel.SetActive(!backpackPanel.activeSelf); },
             () => TogglePanel(settingsPanel),
             () => TogglePanel(helpPanel),
             () => { GameManager.Instance.Logout(); SceneLoader.Instance.LoadScene(SceneNames.Login); }
         };
 
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 4; i++)
         {
             // 每个竹简片
             var bo = NewUI($"Nav_{navNames[i]}", nav.transform);
             var br = bo.GetComponent<RectTransform>();
-            br.anchorMin = new Vector2(i / 6f, 0); br.anchorMax = new Vector2((i + 1) / 6f, 1);
+            br.anchorMin = new Vector2(i / 4f, 0); br.anchorMax = new Vector2((i + 1) / 4f, 1);
             br.sizeDelta = Vector2.zero;
 
             // 竹片底色：中间亮两侧暗（模拟竹片弧面反光）
@@ -275,8 +339,8 @@ public class MainPanel : UIFrame
             {
                 var divider = NewUI($"Divider_{i}", nav.transform);
                 var dr = divider.GetComponent<RectTransform>();
-                dr.anchorMin = new Vector2(i * 0.2f, 0.1f);
-                dr.anchorMax = new Vector2(i * 0.2f, 0.9f);
+                dr.anchorMin = new Vector2(i * 0.25f, 0.1f);
+                dr.anchorMax = new Vector2(i * 0.25f, 0.9f);
                 dr.sizeDelta = new Vector2(2, 0);
                 var dImg = divider.AddComponent<Image>();
                 dImg.color = BambooTwine; dImg.raycastTarget = false;
