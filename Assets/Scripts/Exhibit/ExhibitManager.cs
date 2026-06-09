@@ -554,6 +554,7 @@ public class ExhibitManager : UIFrame
     private void OnCollectClicked()
     {
         if (currentExhibits.Count == 0 || currentExhibit == null) return;
+        SfxCollect();
         string id = currentExhibit.id;
         if (isCollected)
         {

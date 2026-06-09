@@ -122,7 +122,7 @@ public class MainPanel : UIFrame
         kr.offsetMin = kr.offsetMax = Vector2.zero;
         knowBtn.AddComponent<Image>().color = new Color(0.96f, 0.92f, 0.88f);
         var kBtn = knowBtn.AddComponent<Button>();
-        kBtn.onClick.AddListener(() => SceneLoader.Instance.LoadScene(SceneNames.Knowledge));
+        kBtn.onClick.AddListener(() => { SfxClick(); SceneLoader.Instance.LoadScene(SceneNames.Knowledge); });
         // 印章小图标
         AddSealIcon("KIcon", knowBtn.transform, new Vector2(0.18f, 0.5f), 16, "知", 13);
         // 文字
@@ -142,7 +142,7 @@ public class MainPanel : UIFrame
         evr.offsetMin = evr.offsetMax = Vector2.zero;
         evtBtn.AddComponent<Image>().color = new Color(0.96f, 0.92f, 0.88f);
         var eBtn = evtBtn.AddComponent<Button>();
-        eBtn.onClick.AddListener(() => SceneLoader.Instance.LoadScene(SceneNames.Event));
+        eBtn.onClick.AddListener(() => { SfxClick(); SceneLoader.Instance.LoadScene(SceneNames.Event); });
         // 印章小图标
         AddSealIcon("EIcon", evtBtn.transform, new Vector2(0.18f, 0.5f), 16, "史", 13);
         // 文字
@@ -263,6 +263,7 @@ public class MainPanel : UIFrame
 
     private void OnCardClicked(string category, Transform cardTransform)
     {
+        SfxClick();
         // 点击反馈：放大弹回
         StartCoroutine(CardClickFeedback(cardTransform));
         // 跳转
@@ -316,10 +317,10 @@ public class MainPanel : UIFrame
         string[] navNames = { "背包", "设置", "帮助", "退出" };
         Color[] navAccents = { JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
         System.Action[] navActions = {
-            () => { if (backpackPanel == null) { CreateBackpackPanel(); return; } backpackPanel.SetActive(!backpackPanel.activeSelf); },
-            () => TogglePanel(settingsPanel),
-            () => TogglePanel(helpPanel),
-            () => { GameManager.Instance.Logout(); SceneLoader.Instance.LoadScene(SceneNames.Login); }
+            () => { SfxClick(); if (backpackPanel == null) { CreateBackpackPanel(); return; } backpackPanel.SetActive(!backpackPanel.activeSelf); },
+            () => { SfxClick(); TogglePanel(settingsPanel); },
+            () => { SfxClick(); TogglePanel(helpPanel); },
+            () => { SfxClick(); GameManager.Instance.Logout(); SceneLoader.Instance.LoadScene(SceneNames.Login); }
         };
 
         for (int i = 0; i < 4; i++)

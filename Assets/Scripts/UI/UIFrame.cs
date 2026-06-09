@@ -74,6 +74,7 @@ public abstract class UIFrame : MonoBehaviour
     {
         if (GameManager.Instance == null) new GameObject("[GameManager]").AddComponent<GameManager>();
         if (SceneLoader.Instance == null) new GameObject("[SceneLoader]").AddComponent<SceneLoader>();
+        if (AudioManager.Instance == null) new GameObject("[AudioManager]").AddComponent<AudioManager>();
     }
 
     // ──────────────────── UI 基础方法 ────────────────────
@@ -414,6 +415,7 @@ public abstract class UIFrame : MonoBehaviour
     /// </summary>
     protected void ShowToast(string msg, Color color, float duration = 2.5f)
     {
+        SfxToast();
         var toastObj = NewUI("Toast", rootT);
         var tr = toastObj.GetComponent<RectTransform>();
         tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 0f);
@@ -520,4 +522,11 @@ public abstract class UIFrame : MonoBehaviour
         img.raycastTarget = false;
         // 用简单的半透明纯色模拟水墨晕染（后续可替换为渐变纹理）
     }
+
+    // ──────────────────── 音效快捷方法 ────────────────────
+
+    protected static void SfxClick()   => AudioManager.Instance?.PlayClick();
+    protected static void SfxFlip()    => AudioManager.Instance?.PlayFlip();
+    protected static void SfxCollect()=> AudioManager.Instance?.PlayCollect();
+    protected static void SfxToast()  => AudioManager.Instance?.PlayToast();
 }

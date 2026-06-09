@@ -470,6 +470,7 @@ public class KnowledgeManager : UIFrame
     private void ShowPrevKnowledge()
     {
         if (currentKnowledge == null || currentKnowledge.Count == 0) return;
+        SfxFlip();
         knowledgeIndex = (knowledgeIndex - 1 + currentKnowledge.Count) % currentKnowledge.Count;
         UpdateKnowledgeCard();
     }
@@ -477,6 +478,7 @@ public class KnowledgeManager : UIFrame
     private void ShowNextKnowledge()
     {
         if (currentKnowledge == null || currentKnowledge.Count == 0) return;
+        SfxFlip();
         knowledgeIndex = (knowledgeIndex + 1) % currentKnowledge.Count;
         UpdateKnowledgeCard();
     }
