@@ -52,11 +52,7 @@ public class MainPanel : UIFrame
         CreateNavBar(root);
 
         // ── 弹窗 ──
-        settingsPanel = MakeOverlay(root, "系统设置",
-            $"音量：{Mathf.RoundToInt(GameManager.Instance.volume * 100)}%\n" +
-            $"亮度：{Mathf.RoundToInt(GameManager.Instance.brightness * 100)}%\n" +
-            "主题风格：" + GameManager.Instance.themeStyle + "\n\n" +
-            "所有设置已通过 GameManager 保存\n点击「保存设置」按钮应用变更", GoldColor);
+        settingsPanel = CreateSettingsPanel(root);
         helpPanel = MakeOverlay(root, "帮助",
             "1. 选择品类卡片浏览展品\n2. 拖拽旋转3D模型\n3. 查看展品详细信息\n4. 收藏感兴趣的展品\n5. 在背包中管理收藏\n6. 知识探索学习文化\n7. 历史故事了解传承", ZhuRed);
     }
@@ -89,13 +85,24 @@ public class MainPanel : UIFrame
         var tt = titleObj.AddComponent<Text>();
         tt.font = Font(); tt.text = "了不起的非遗"; tt.fontSize = 26; tt.color = ZhuRed; tt.alignment = TextAnchor.MiddleCenter;
 
-        // 右侧用户名
-        var userObj = NewUI("User", header.transform);
+        // 右侧头像 + 用户名
+        var userGroup = NewUI("UserGroup", header.transform);
+        var ugr = userGroup.GetComponent<RectTransform>();
+        ugr.anchorMin = ugr.anchorMax = new Vector2(1f, 0.5f);
+        ugr.pivot = new Vector2(1f, 0.5f);
+        ugr.sizeDelta = new Vector2(180, 40);
+        ugr.anchoredPosition = new Vector2(-15, 0);
+
+        // 头像印章
+        int avatarIdx = PlayerPrefs.GetInt($"User_{GameManager.Instance?.currentUser}_Avatar", 0);
+        var avatarObj = AddSealIcon("Avatar", userGroup.transform, new Vector2(0.82f, 0.5f), 14, AvatarChars[Mathf.Clamp(avatarIdx, 0, AvatarChars.Length - 1)], 14);
+        avatarObj.GetComponent<Image>().color = AvatarColors[Mathf.Clamp(avatarIdx, 0, AvatarColors.Length - 1)];
+
+        // 用户名
+        var userObj = NewUI("User", userGroup.transform);
         var ur = userObj.GetComponent<RectTransform>();
-        ur.anchorMin = ur.anchorMax = new Vector2(1f, 0.5f);
-        ur.pivot = new Vector2(1f, 0.5f);
-        ur.sizeDelta = new Vector2(150, 30);
-        ur.anchoredPosition = new Vector2(-15, 0);
+        ur.anchorMin = Vector2.zero; ur.anchorMax = new Vector2(0.78f, 1f);
+        ur.offsetMin = ur.offsetMax = Vector2.zero;
         var ut = userObj.AddComponent<Text>();
         ut.font = Font(); ut.text = GameManager.Instance?.currentUser ?? ""; ut.fontSize = 15; ut.color = GoldColor; ut.alignment = TextAnchor.MiddleRight;
     }
@@ -385,6 +392,398 @@ public class MainPanel : UIFrame
         br.pivot = new Vector2(0.5f, 0f);
         br.sizeDelta = new Vector2(0, 2);
         var bImg = bot.AddComponent<Image>(); bImg.color = ZhuRed; bImg.raycastTarget = false;
+    }
+
+    // ──────────────────── 设置面板 ────────────────────
+
+    private static readonly Color[] AvatarColors = {
+        new Color(0.76f, 0.21f, 0.19f),   // 朱红
+        new Color(0.17f, 0.17f, 0.17f),   // 墨色
+        new Color(0.26f, 0.47f, 0.72f),   // 青蓝
+        new Color(0.72f, 0.53f, 0.19f),   // 琥珀
+        new Color(0.18f, 0.48f, 0.43f),   // 翡翠
+        new Color(0.83f, 0.65f, 0.27f),   // 金色
+    };
+    private static readonly string[] AvatarChars = { "遗", "韵", "雅", "风", "翠", "锦" };
+
+    private InputField oldPwdInput, newPwdInput, confirmPwdInput;
+
+    private GameObject CreateSettingsPanel(Transform parent)
+    {
+        var overlay = NewUI("SettingsOverlay", parent);
+        Stretch(overlay);
+        var overlayImg = overlay.AddComponent<Image>();
+        overlayImg.color = new Color(0, 0, 0, 0.85f);
+        // 遮罩层不拦截点击，只有 X 按钮可关闭
+        overlayImg.raycastTarget = false;
+        overlay.SetActive(false);
+
+        // 面板 — Image 必须拦截 raycast，否则点击会穿透到遮罩层
+        var panel = NewUI("Panel", overlay.transform);
+        var pr = panel.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
+        pr.sizeDelta = new Vector2(440, 700);
+        var panelImg = panel.AddComponent<Image>();
+        panelImg.color = XuanPaper;
+        panelImg.raycastTarget = true;
+
+        // 顶部朱红装饰线
+        var topLine = NewUI("TopLine", panel.transform);
+        var tlr = topLine.GetComponent<RectTransform>();
+        tlr.anchorMin = new Vector2(0, 1); tlr.anchorMax = new Vector2(1, 1);
+        tlr.pivot = new Vector2(0.5f, 1f); tlr.sizeDelta = new Vector2(0, 3);
+        topLine.AddComponent<Image>().color = ZhuRed;
+
+        // 标题
+        var titleObj = NewUI("Title", panel.transform);
+        var tr = titleObj.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0, 1); tr.anchorMax = new Vector2(1, 1);
+        tr.pivot = new Vector2(0.5f, 1f); tr.sizeDelta = new Vector2(0, 45);
+        var tt = titleObj.AddComponent<Text>();
+        tt.font = Font(); tt.text = "系统设置"; tt.fontSize = 24; tt.color = ZhuRed; tt.alignment = TextAnchor.MiddleCenter;
+
+        // 关闭按钮
+        var xObj = NewUI("X", panel.transform);
+        var xr = xObj.GetComponent<RectTransform>();
+        xr.anchorMin = xr.anchorMax = new Vector2(1, 1); xr.pivot = new Vector2(1, 1);
+        xr.sizeDelta = new Vector2(36, 36); xr.anchoredPosition = new Vector2(-8, -8);
+        xObj.AddComponent<Image>().color = ZhuRed;
+        xObj.AddComponent<Button>().onClick.AddListener(() => overlay.SetActive(false));
+        var xTxt = NewUI("XT", xObj.transform); Stretch(xTxt);
+        var xt = xTxt.AddComponent<Text>();
+        xt.font = Font(); xt.text = "X"; xt.fontSize = 20; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
+
+        // ── 内容区（可滚动） ──
+        var content = NewUI("Content", panel.transform);
+        var cr = content.GetComponent<RectTransform>();
+        cr.anchorMin = Vector2.zero; cr.anchorMax = new Vector2(1, 1);
+        cr.offsetMin = new Vector2(20, 20); cr.offsetMax = new Vector2(-20, -55);
+
+        float y = -15f;
+
+        // ── 音量滑块 ──
+        y = AddSettingSectionTitle(content.transform, "音量调节", y);
+        y = AddVolumeSlider(content.transform, y);
+
+        y += 20f;
+
+        // ── 头像编辑 ──
+        y = AddSettingSectionTitle(content.transform, "头像选择", y);
+        y = AddAvatarSelector(content.transform, y);
+
+        y += 20f;
+
+        // ── 修改密码 ──
+        y = AddSettingSectionTitle(content.transform, "修改密码", y);
+        y = AddPasswordChangeSection(content.transform, y);
+
+        return overlay;
+    }
+
+    private float AddSettingSectionTitle(Transform parent, string text, float y)
+    {
+        var lbl = NewUI("SecLbl", parent);
+        var r = lbl.GetComponent<RectTransform>();
+        r.anchorMin = new Vector2(0, 1); r.anchorMax = new Vector2(1, 1);
+        r.pivot = new Vector2(0, 1f); r.sizeDelta = new Vector2(0, 28);
+        r.anchoredPosition = new Vector2(0, y);
+        var t = lbl.AddComponent<Text>();
+        t.font = Font(); t.text = "— " + text + " —"; t.fontSize = 16; t.color = GoldColor; t.alignment = TextAnchor.MiddleCenter;
+        return y - 36f;
+    }
+
+    private float AddVolumeSlider(Transform parent, float y)
+    {
+        // 滑块行容器
+        var row = NewUI("VolRow", parent);
+        var rr = row.GetComponent<RectTransform>();
+        rr.anchorMin = new Vector2(0, 1); rr.anchorMax = new Vector2(1, 1);
+        rr.pivot = new Vector2(0, 1f); rr.sizeDelta = new Vector2(0, 40);
+        rr.anchoredPosition = new Vector2(0, y);
+
+        // 左标签
+        var lblObj = NewUI("Lbl", row.transform);
+        var lr = lblObj.GetComponent<RectTransform>();
+        lr.anchorMin = Vector2.zero; lr.anchorMax = new Vector2(0.15f, 1f);
+        lr.offsetMin = lr.offsetMax = Vector2.zero;
+        var lt = lblObj.AddComponent<Text>();
+        lt.font = Font(); lt.text = "音量"; lt.fontSize = 15; lt.color = InkBlack; lt.alignment = TextAnchor.MiddleRight;
+
+        // 滑块
+        var sliderObj = NewUI("Slider", row.transform);
+        var sr = sliderObj.GetComponent<RectTransform>();
+        sr.anchorMin = new Vector2(0.18f, 0.15f); sr.anchorMax = new Vector2(0.75f, 0.85f);
+        sr.offsetMin = sr.offsetMax = Vector2.zero;
+
+        // Slider 背景
+        var bgObj = NewUI("BG", sliderObj.transform);
+        Stretch(bgObj);
+        bgObj.AddComponent<Image>().color = new Color(0.85f, 0.82f, 0.75f);
+
+        // Fill 区域
+        var fillArea = NewUI("FillArea", sliderObj.transform);
+        var far = fillArea.GetComponent<RectTransform>();
+        far.anchorMin = Vector2.zero; far.anchorMax = Vector2.one;
+        far.offsetMin = far.offsetMax = Vector2.zero;
+        var fill = NewUI("Fill", fillArea.transform);
+        Stretch(fill);
+        var fillImg = fill.AddComponent<Image>();
+        fillImg.color = ZhuRed;
+
+        // Handle
+        var handleArea = NewUI("HandleArea", sliderObj.transform);
+        Stretch(handleArea);
+        var handle = NewUI("Handle", handleArea.transform);
+        var hr = handle.GetComponent<RectTransform>();
+        hr.anchorMin = hr.anchorMax = new Vector2(0.5f, 0.5f);
+        hr.sizeDelta = new Vector2(24, 24);
+        var handleImg = handle.AddComponent<Image>();
+        handleImg.color = ZhuRed;
+
+        var slider = sliderObj.AddComponent<Slider>();
+        slider.targetGraphic = handleImg;
+        slider.fillRect = fill.GetComponent<RectTransform>();
+        slider.handleRect = handle.GetComponent<RectTransform>();
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.minValue = 0f;
+        slider.maxValue = 1f;
+        slider.value = GameManager.Instance.volume;
+
+        // 百分比文字
+        var pctObj = NewUI("Pct", row.transform);
+        var pctR = pctObj.GetComponent<RectTransform>();
+        pctR.anchorMin = new Vector2(0.78f, 0); pctR.anchorMax = new Vector2(1f, 1f);
+        pctR.offsetMin = pctR.offsetMax = Vector2.zero;
+        var pctTxt = pctObj.AddComponent<Text>();
+        pctTxt.font = Font(); pctTxt.fontSize = 15; pctTxt.color = InkBlack; pctTxt.alignment = TextAnchor.MiddleCenter;
+
+        void OnVolChanged(float v)
+        {
+            GameManager.Instance.volume = v;
+            pctTxt.text = Mathf.RoundToInt(v * 100) + "%";
+            if (AudioManager.Instance != null) AudioManager.Instance.UpdateVolume();
+        }
+        slider.onValueChanged.AddListener(OnVolChanged);
+        OnVolChanged(slider.value);
+
+        return y - 50f;
+    }
+
+    private float AddAvatarSelector(Transform parent, float y)
+    {
+        var row = NewUI("AvatarRow", parent);
+        var rr = row.GetComponent<RectTransform>();
+        rr.anchorMin = new Vector2(0, 1); rr.anchorMax = new Vector2(1, 1);
+        rr.pivot = new Vector2(0, 1f); rr.sizeDelta = new Vector2(0, 72);
+        rr.anchoredPosition = new Vector2(0, y);
+
+        int currentAvatar = PlayerPrefs.GetInt($"User_{GameManager.Instance.currentUser}_Avatar", 0);
+
+        for (int i = 0; i < AvatarColors.Length; i++)
+        {
+            var avatar = NewUI($"Av{i}", row.transform);
+            var ar = avatar.GetComponent<RectTransform>();
+            float cellW = 1f / AvatarColors.Length;
+            ar.anchorMin = new Vector2(i * cellW + 0.02f, 0.08f);
+            ar.anchorMax = new Vector2((i + 1) * cellW - 0.02f, 0.92f);
+            ar.offsetMin = ar.offsetMax = Vector2.zero;
+
+            avatar.AddComponent<Image>().color = AvatarColors[i];
+            var avBtn = avatar.AddComponent<Button>();
+            int idx = i;
+            avBtn.onClick.AddListener(() => OnAvatarSelected(idx));
+
+            var aTxt = NewUI("T", avatar.transform); Stretch(aTxt);
+            var at = aTxt.AddComponent<Text>();
+            at.font = Font(); at.text = AvatarChars[i]; at.fontSize = 20; at.color = Color.white; at.alignment = TextAnchor.MiddleCenter;
+
+            // 当前选中项加金色边框
+            if (i == currentAvatar)
+            {
+                var border = NewUI("Border", avatar.transform);
+                Stretch(border);
+                var bImg = border.AddComponent<Image>();
+                bImg.color = GoldColor; bImg.raycastTarget = false;
+                var bRect = border.GetComponent<RectTransform>();
+                bRect.anchorMin = Vector2.zero; bRect.anchorMax = Vector2.one;
+                bRect.offsetMin = new Vector2(-3, -3); bRect.offsetMax = new Vector2(3, 3);
+                border.transform.SetAsFirstSibling();
+            }
+        }
+
+        return y - 84f;
+    }
+
+    private void OnAvatarSelected(int idx)
+    {
+        SfxClick();
+        PlayerPrefs.SetInt($"User_{GameManager.Instance.currentUser}_Avatar", idx);
+        PlayerPrefs.Save();
+
+        // 刷新头像选中高亮
+        RefreshAvatarHighlight(idx);
+
+        // 更新 header 头像
+        RefreshHeaderAvatar(idx);
+
+        ShowToast("头像已更新", JadeGreen);
+    }
+
+    private void RefreshAvatarHighlight(int selectedIdx)
+    {
+        if (settingsPanel == null) return;
+        var avatarRow = settingsPanel.transform.Find("Panel/Content/AvatarRow");
+        if (avatarRow == null) return;
+
+        for (int i = 0; i < AvatarColors.Length; i++)
+        {
+            var av = avatarRow.Find($"Av{i}");
+            if (av == null) continue;
+            // 移除旧边框
+            var oldBorder = av.Find("Border");
+            if (oldBorder != null) Destroy(oldBorder.gameObject);
+            // 选中项加金色边框
+            if (i == selectedIdx)
+            {
+                var border = NewUI("Border", av);
+                Stretch(border);
+                var bImg = border.AddComponent<Image>();
+                bImg.color = GoldColor; bImg.raycastTarget = false;
+                var bRect = border.GetComponent<RectTransform>();
+                bRect.anchorMin = Vector2.zero; bRect.anchorMax = Vector2.one;
+                bRect.offsetMin = new Vector2(-3, -3); bRect.offsetMax = new Vector2(3, 3);
+                border.transform.SetAsFirstSibling();
+            }
+        }
+    }
+
+    private void RefreshHeaderAvatar(int idx)
+    {
+        var headerAvatar = GameObject.Find("Avatar");
+        if (headerAvatar != null)
+        {
+            headerAvatar.GetComponent<Image>().color = AvatarColors[Mathf.Clamp(idx, 0, AvatarColors.Length - 1)];
+            var t = headerAvatar.transform.Find("T")?.GetComponent<Text>();
+            if (t != null) t.text = AvatarChars[Mathf.Clamp(idx, 0, AvatarChars.Length - 1)];
+        }
+    }
+
+    private float AddPasswordChangeSection(Transform parent, float y)
+    {
+        // 旧密码
+        y = AddPwdField("OldPwd", parent, y, "旧密码", ref oldPwdInput, "请输入旧密码", true);
+        y -= 6f;
+
+        // 新密码
+        y = AddPwdField("NewPwd", parent, y, "新密码", ref newPwdInput, "请输入新密码（至少4位）", true);
+        y -= 6f;
+
+        // 确认密码
+        y = AddPwdField("ConfirmPwd", parent, y, "确认新密码", ref confirmPwdInput, "请再次输入新密码", true);
+        y -= 16f;
+
+        // 确认修改按钮
+        var btnObj = NewUI("ChangePwdBtn", parent);
+        var br = btnObj.GetComponent<RectTransform>();
+        br.anchorMin = br.anchorMax = new Vector2(0.5f, 1f);
+        br.pivot = new Vector2(0.5f, 1f);
+        br.sizeDelta = new Vector2(200, 44);
+        br.anchoredPosition = new Vector2(0, y);
+        btnObj.AddComponent<Image>().color = ZhuRed;
+        btnObj.AddComponent<Button>().onClick.AddListener(OnChangePassword);
+        var bTxt = NewUI("T", btnObj.transform); Stretch(bTxt);
+        var bt = bTxt.AddComponent<Text>();
+        bt.font = Font(); bt.text = "确认修改"; bt.fontSize = 18; bt.color = Color.white; bt.alignment = TextAnchor.MiddleCenter;
+
+        return y - 54f;
+    }
+
+    private float AddPwdField(string name, Transform parent, float y, string label, ref InputField inputRef, string placeholder, bool isPassword)
+    {
+        // 标签
+        var lbl = NewUI(name + "Lbl", parent);
+        var lr = lbl.GetComponent<RectTransform>();
+        lr.anchorMin = new Vector2(0, 1); lr.anchorMax = new Vector2(1, 1);
+        lr.pivot = new Vector2(0, 1f); lr.sizeDelta = new Vector2(0, 22);
+        lr.anchoredPosition = new Vector2(0, y);
+        var lt = lbl.AddComponent<Text>();
+        lt.font = Font(); lt.text = label; lt.fontSize = 14; lt.color = InkBlack; lt.alignment = TextAnchor.MiddleLeft;
+        y -= 26f;
+
+        // 输入框（手工定位，避免 AddInputField 的 anchor 冲突）
+        var field = NewUI(name, parent);
+        var fr = field.GetComponent<RectTransform>();
+        fr.anchorMin = new Vector2(0, 1); fr.anchorMax = new Vector2(1, 1);
+        fr.pivot = new Vector2(0, 1f); fr.sizeDelta = new Vector2(0, 38);
+        fr.anchoredPosition = new Vector2(0, y);
+        field.AddComponent<Image>().color = new Color(XuanPaper.r, XuanPaper.g, XuanPaper.b, 0.5f);
+
+        // 底部朱红线
+        var underline = NewUI("Line", field.transform);
+        var ulr = underline.GetComponent<RectTransform>();
+        ulr.anchorMin = new Vector2(0, 0); ulr.anchorMax = new Vector2(1, 0);
+        ulr.pivot = new Vector2(0.5f, 0f);
+        ulr.sizeDelta = new Vector2(0, 2);
+        var ulImg = underline.AddComponent<Image>(); ulImg.color = ZhuRed; ulImg.raycastTarget = false;
+
+        // 文本
+        var tObj = NewUI("Text", field.transform);
+        var tr = tObj.GetComponent<RectTransform>();
+        tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one;
+        tr.offsetMin = new Vector2(12, 6); tr.offsetMax = new Vector2(-12, -4);
+        var txt = tObj.AddComponent<Text>();
+        txt.font = Font(); txt.fontSize = 16; txt.color = InkBlack; txt.alignment = TextAnchor.MiddleLeft;
+
+        // 占位符
+        var pObj = NewUI("Placeholder", field.transform);
+        var pr2 = pObj.GetComponent<RectTransform>();
+        pr2.anchorMin = Vector2.zero; pr2.anchorMax = Vector2.one;
+        pr2.offsetMin = new Vector2(12, 6); pr2.offsetMax = new Vector2(-12, -4);
+        var pht = pObj.AddComponent<Text>();
+        pht.font = Font(); pht.text = placeholder; pht.fontSize = 14;
+        pht.color = new Color(0.5f, 0.5f, 0.5f, 0.5f); pht.alignment = TextAnchor.MiddleLeft;
+
+        var inf = field.AddComponent<InputField>();
+        inf.textComponent = txt;
+        inf.placeholder = pht;
+        if (isPassword) inf.contentType = InputField.ContentType.Password;
+
+        inputRef = inf;
+        return y - 44f;
+    }
+
+    private void OnChangePassword()
+    {
+        string oldPwd = oldPwdInput.text;
+        string newPwd = newPwdInput.text;
+        string confirmPwd = confirmPwdInput.text;
+
+        // 全部为空则跳过
+        if (string.IsNullOrEmpty(oldPwd) && string.IsNullOrEmpty(newPwd) && string.IsNullOrEmpty(confirmPwd))
+            return;
+
+        if (string.IsNullOrEmpty(oldPwd))
+        { SfxToast(); ShowToast("请输入旧密码", ZhuRed); return; }
+
+        string storedPwd = PlayerPrefs.GetString($"User_{GameManager.Instance.currentUser}_Password", "");
+        if (GameManager.EncryptPassword(oldPwd) != storedPwd)
+        { SfxToast(); ShowToast("旧密码错误", ZhuRed); return; }
+
+        if (string.IsNullOrEmpty(newPwd) || string.IsNullOrEmpty(confirmPwd))
+        { SfxToast(); ShowToast("请输入新密码", ZhuRed); return; }
+
+        if (newPwd.Length < 4)
+        { SfxToast(); ShowToast("新密码至少4位", ZhuRed); return; }
+
+        if (newPwd != confirmPwd)
+        { SfxToast(); ShowToast("两次密码不一致", ZhuRed); return; }
+
+        PlayerPrefs.SetString($"User_{GameManager.Instance.currentUser}_Password", GameManager.EncryptPassword(newPwd));
+        PlayerPrefs.Save();
+        oldPwdInput.text = "";
+        newPwdInput.text = "";
+        confirmPwdInput.text = "";
+        ShowToast("密码修改成功", JadeGreen);
     }
 
     private void TogglePanel(GameObject p) { if (p != null) p.SetActive(!p.activeSelf); }

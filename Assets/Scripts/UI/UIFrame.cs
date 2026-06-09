@@ -303,15 +303,18 @@ public abstract class UIFrame : MonoBehaviour
     {
         var overlay = NewUI("Overlay", parent);
         Stretch(overlay);
-        overlay.AddComponent<Image>().color = new Color(0, 0, 0, 0.85f);
+        var olImg = overlay.AddComponent<Image>();
+        olImg.color = new Color(0, 0, 0, 0.85f);
+        olImg.raycastTarget = false; // 遮罩不拦截点击，只有 X 按钮关闭
         overlay.SetActive(false);
 
         var panel = NewUI("Panel", overlay.transform);
         var pr = panel.GetComponent<RectTransform>();
         pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
         pr.sizeDelta = new Vector2(440, 380);
-        panel.AddComponent<Image>().color = XuanPaper;
-        panel.GetComponent<Image>().raycastTarget = false;
+        var panelImg = panel.AddComponent<Image>();
+        panelImg.color = XuanPaper;
+        panelImg.raycastTarget = true;
 
         // 顶部朱红装饰线
         var topLine = NewUI("TopLine", panel.transform);
