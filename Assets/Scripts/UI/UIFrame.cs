@@ -363,13 +363,37 @@ public abstract class UIFrame : MonoBehaviour
         var tl = tObj.AddComponent<Text>();
         tl.font = Font(); tl.text = title; tl.fontSize = 24; tl.color = accent; tl.alignment = TextAnchor.MiddleCenter;
 
-        // 内容
-        var cObj = NewUI("C", panel.transform);
-        var cr = cObj.GetComponent<RectTransform>();
-        cr.anchorMin = Vector2.zero; cr.anchorMax = new Vector2(1, 1);
-        cr.offsetMin = new Vector2(20, 20); cr.offsetMax = new Vector2(-20, -55);
-        var cl = cObj.AddComponent<Text>();
+        // 内容（ScrollRect 可滚动）
+        var viewport = NewUI("Viewport", panel.transform);
+        var vpR = viewport.GetComponent<RectTransform>();
+        vpR.anchorMin = Vector2.zero; vpR.anchorMax = new Vector2(1, 1);
+        vpR.offsetMin = new Vector2(20, 20); vpR.offsetMax = new Vector2(-20, -55);
+        var vpImg = viewport.AddComponent<Image>();
+        vpImg.color = new Color(1, 1, 1, 1);
+        vpImg.raycastTarget = true;
+        var mask = viewport.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+
+        var contentObj = NewUI("C", viewport.transform);
+        var cR = contentObj.GetComponent<RectTransform>();
+        cR.anchorMin = new Vector2(0, 1); cR.anchorMax = new Vector2(1, 1);
+        cR.pivot = new Vector2(0.5f, 1f);
+        cR.sizeDelta = new Vector2(0, 0);
+        var cl = contentObj.AddComponent<Text>();
         cl.font = Font(); cl.text = content; cl.fontSize = 17; cl.color = InkBlack; cl.alignment = TextAnchor.UpperLeft;
+        cl.lineSpacing = 1.4f;
+
+        var csf = contentObj.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var scrollRect = viewport.AddComponent<ScrollRect>();
+        scrollRect.content = cR;
+        scrollRect.viewport = vpR;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.inertia = true;
+        scrollRect.decelerationRate = 0.1f;
 
         // 关闭按钮
         var xObj = NewUI("X", panel.transform);
