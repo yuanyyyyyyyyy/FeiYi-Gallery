@@ -67,7 +67,9 @@ public abstract class UIFrame : MonoBehaviour
         var canvasObj = new GameObject("Canvas");
         var canvas = canvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvasObj.AddComponent<CanvasScaler>();
+        var scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+        scaler.scaleFactor = 1f;
         canvasObj.AddComponent<GraphicRaycaster>();
         canvasT = canvas.transform;
 
@@ -408,6 +410,85 @@ public abstract class UIFrame : MonoBehaviour
         Stretch(xTxt);
         var xt = xTxt.AddComponent<Text>();
         xt.font = Font(); xt.text = "X"; xt.fontSize = 20; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
+
+        return overlay;
+    }
+
+    /// <summary>
+    /// 创建确认对话框 — 遮罩 + 面板 + 提示文字 + 确认/取消按钮
+    /// </summary>
+    protected GameObject MakeConfirmDialog(Transform parent, string title, string message, Color accent, System.Action onConfirm)
+    {
+        var overlay = NewUI("ConfirmOverlay", parent);
+        Stretch(overlay);
+        var olImg = overlay.AddComponent<Image>();
+        olImg.color = new Color(0, 0, 0, 0.85f);
+        olImg.raycastTarget = true;
+        overlay.SetActive(false);
+
+        var panel = NewUI("Panel", overlay.transform);
+        var pr = panel.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
+        pr.sizeDelta = new Vector2(380, 240);
+        var panelImg = panel.AddComponent<Image>();
+        panelImg.color = XuanPaper;
+        panelImg.raycastTarget = true;
+
+        // 顶部朱红装饰线
+        var topLine = NewUI("TopLine", panel.transform);
+        var tlr = topLine.GetComponent<RectTransform>();
+        tlr.anchorMin = new Vector2(0, 1); tlr.anchorMax = new Vector2(1, 1);
+        tlr.pivot = new Vector2(0.5f, 1f); tlr.sizeDelta = new Vector2(0, 3);
+        topLine.AddComponent<Image>().color = ZhuRed;
+
+        // 标题
+        var tObj = NewUI("Title", panel.transform);
+        var tr = tObj.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0, 1); tr.anchorMax = new Vector2(1, 1);
+        tr.pivot = new Vector2(0.5f, 1f); tr.sizeDelta = new Vector2(0, 40);
+        var tl = tObj.AddComponent<Text>();
+        tl.font = Font(); tl.text = title; tl.fontSize = 22; tl.color = accent; tl.alignment = TextAnchor.MiddleCenter;
+
+        // 提示信息
+        var msgObj = NewUI("Msg", panel.transform);
+        var mr = msgObj.GetComponent<RectTransform>();
+        mr.anchorMin = new Vector2(0.08f, 0.3f); mr.anchorMax = new Vector2(0.92f, 0.72f);
+        mr.offsetMin = mr.offsetMax = Vector2.zero;
+        var mt = msgObj.AddComponent<Text>();
+        mt.font = Font(); mt.text = message; mt.fontSize = 17; mt.color = InkBlack; mt.alignment = TextAnchor.MiddleCenter;
+        mt.lineSpacing = 1.4f;
+
+        // 按钮行
+        var btnRow = NewUI("BtnRow", panel.transform);
+        var brr = btnRow.GetComponent<RectTransform>();
+        brr.anchorMin = new Vector2(0, 0.05f); brr.anchorMax = new Vector2(1, 0.28f);
+        brr.offsetMin = brr.offsetMax = Vector2.zero;
+
+        // 取消按钮
+        var cancelBtn = NewUI("CancelBtn", btnRow.transform);
+        var cbr = cancelBtn.GetComponent<RectTransform>();
+        cbr.anchorMin = new Vector2(0.05f, 0.1f); cbr.anchorMax = new Vector2(0.45f, 0.9f);
+        cbr.offsetMin = cbr.offsetMax = Vector2.zero;
+        cancelBtn.AddComponent<Image>().color = new Color(0.6f, 0.6f, 0.6f);
+        cancelBtn.AddComponent<Button>().onClick.AddListener(() => overlay.SetActive(false));
+        var cbt = NewUI("T", cancelBtn.transform); Stretch(cbt);
+        var cbTxt = cbt.AddComponent<Text>();
+        cbTxt.font = Font(); cbTxt.text = "取消"; cbTxt.fontSize = 18; cbTxt.color = Color.white; cbTxt.alignment = TextAnchor.MiddleCenter;
+
+        // 确认按钮
+        var confirmBtn = NewUI("ConfirmBtn", btnRow.transform);
+        var cfbr = confirmBtn.GetComponent<RectTransform>();
+        cfbr.anchorMin = new Vector2(0.55f, 0.1f); cfbr.anchorMax = new Vector2(0.95f, 0.9f);
+        cfbr.offsetMin = cfbr.offsetMax = Vector2.zero;
+        confirmBtn.AddComponent<Image>().color = accent;
+        confirmBtn.AddComponent<Button>().onClick.AddListener(() =>
+        {
+            overlay.SetActive(false);
+            onConfirm?.Invoke();
+        });
+        var cfbt = NewUI("T", confirmBtn.transform); Stretch(cfbt);
+        var cfbTxt = cfbt.AddComponent<Text>();
+        cfbTxt.font = Font(); cfbTxt.text = "确认"; cfbTxt.fontSize = 18; cfbTxt.color = Color.white; cfbTxt.alignment = TextAnchor.MiddleCenter;
 
         return overlay;
     }

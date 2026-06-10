@@ -291,7 +291,13 @@ public class MainPanel : UIFrame
         // RawImage 显示3D渲染结果
         var rawImg = stageUI.AddComponent<RawImage>();
         rawImg.texture = charRT;
-        rawImg.raycastTarget = false;
+        rawImg.raycastTarget = true;
+
+        // 点击3D角色区域触发跳跃
+        stageUI.AddComponent<Button>().onClick.AddListener(() =>
+        {
+            if (character != null) character.Jump();
+        });
         rawImg.color = Color.white;
 
         // 启动自动走动协程
@@ -541,7 +547,7 @@ public class MainPanel : UIFrame
             () => { SfxClick(); if (backpackPanel == null) { CreateBackpackPanel(); return; } if (!backpackPanel.activeSelf) { backpackPanel.SetActive(true); RefreshBackpackList(); } else backpackPanel.SetActive(false); },
             () => { SfxClick(); TogglePanel(settingsPanel); },
             () => { SfxClick(); TogglePanel(helpPanel); },
-            () => { SfxClick(); GameManager.Instance.Logout(); SceneLoader.Instance.LoadScene(SceneNames.Login); }
+            () => { SfxClick(); ShowLogoutConfirm(); }
         };
 
         for (int i = 0; i < 4; i++)
@@ -648,26 +654,34 @@ public class MainPanel : UIFrame
         tlr.pivot = new Vector2(0.5f, 1f); tlr.sizeDelta = new Vector2(0, 3);
         topLine.AddComponent<Image>().color = ZhuRed;
 
-        // 标题
-        var titleObj = NewUI("Title", panel.transform);
+        // 标题行容器（标题 + X 按钮同行）
+        var titleRow = NewUI("TitleRow", panel.transform);
+        var trr = titleRow.GetComponent<RectTransform>();
+        trr.anchorMin = new Vector2(0, 1); trr.anchorMax = new Vector2(1, 1);
+        trr.pivot = new Vector2(0.5f, 1f);
+        trr.sizeDelta = new Vector2(0, 44);
+        trr.anchoredPosition = Vector2.zero;
+
+        // 标题文字
+        var titleObj = NewUI("Title", titleRow.transform);
         var tr = titleObj.GetComponent<RectTransform>();
-        tr.anchorMin = new Vector2(0, 1); tr.anchorMax = new Vector2(1, 1);
-        tr.pivot = new Vector2(0.5f, 1f); tr.sizeDelta = new Vector2(0, 45);
+        tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one;
+        tr.offsetMin = new Vector2(10, 0); tr.offsetMax = new Vector2(-50, 0);
         var tt = titleObj.AddComponent<Text>();
         tt.font = Font(); tt.text = "系统设置"; tt.fontSize = 24; tt.color = ZhuRed; tt.alignment = TextAnchor.MiddleCenter;
 
-        // 关闭按钮 — 右上角标题行内
-        var xObj = NewUI("X", panel.transform);
+        // 关闭按钮 — 标题行右侧
+        var xObj = NewUI("X", titleRow.transform);
         var xr = xObj.GetComponent<RectTransform>();
-        xr.anchorMin = xr.anchorMax = new Vector2(1, 1);
-        xr.pivot = new Vector2(1, 1);
-        xr.sizeDelta = new Vector2(44, 44);
-        xr.anchoredPosition = new Vector2(-6, -28);
+        xr.anchorMin = new Vector2(1, 0); xr.anchorMax = new Vector2(1, 1);
+        xr.pivot = new Vector2(1, 0.5f);
+        xr.sizeDelta = new Vector2(38, 38);
+        xr.anchoredPosition = new Vector2(-4, 0);
         xObj.AddComponent<Image>().color = ZhuRed;
         xObj.AddComponent<Button>().onClick.AddListener(() => overlay.SetActive(false));
         var xTxt = NewUI("XT", xObj.transform); Stretch(xTxt);
         var xt = xTxt.AddComponent<Text>();
-        xt.font = Font(); xt.text = "✕"; xt.fontSize = 26; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
+        xt.font = Font(); xt.text = "X"; xt.fontSize = 20; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
 
         // ── 内容区（可滚动） ──
         var content = NewUI("Content", panel.transform);
@@ -675,13 +689,14 @@ public class MainPanel : UIFrame
         cr.anchorMin = Vector2.zero; cr.anchorMax = new Vector2(1, 1);
         cr.offsetMin = new Vector2(20, 20); cr.offsetMax = new Vector2(-20, -55);
 
-        float y = -15f;
+        float y = -10f;
 
-        // ── 音量滑块 ──
-        y = AddSettingSectionTitle(content.transform, "音量调节", y);
+        // ── 音量 & 亮度（紧凑双行） ──
+        y = AddSettingSectionTitle(content.transform, "音量 / 亮度", y);
         y = AddVolumeSlider(content.transform, y);
+        y = AddBrightnessSlider(content.transform, y);
 
-        y += 20f;
+        y += 12f;
 
         // ── 主题切换 ──
         y = AddSettingSectionTitle(content.transform, "主题风格", y);
@@ -710,8 +725,8 @@ public class MainPanel : UIFrame
         r.pivot = new Vector2(0, 1f); r.sizeDelta = new Vector2(0, 28);
         r.anchoredPosition = new Vector2(0, y);
         var t = lbl.AddComponent<Text>();
-        t.font = Font(); t.text = "— " + text + " —"; t.fontSize = 16; t.color = GoldColor; t.alignment = TextAnchor.MiddleCenter;
-        return y - 36f;
+        t.font = Font(); t.text = "— " + text + " —"; t.fontSize = 14; t.color = GoldColor; t.alignment = TextAnchor.MiddleCenter;
+        return y - 28f;
     }
 
     private float AddVolumeSlider(Transform parent, float y)
@@ -720,7 +735,7 @@ public class MainPanel : UIFrame
         var row = NewUI("VolRow", parent);
         var rr = row.GetComponent<RectTransform>();
         rr.anchorMin = new Vector2(0, 1); rr.anchorMax = new Vector2(1, 1);
-        rr.pivot = new Vector2(0, 1f); rr.sizeDelta = new Vector2(0, 40);
+        rr.pivot = new Vector2(0, 1f); rr.sizeDelta = new Vector2(0, 32);
         rr.anchoredPosition = new Vector2(0, y);
 
         // 左标签
@@ -788,7 +803,100 @@ public class MainPanel : UIFrame
         slider.onValueChanged.AddListener(OnVolChanged);
         OnVolChanged(slider.value);
 
-        return y - 50f;
+        return y - 40f;
+    }
+
+    private float AddBrightnessSlider(Transform parent, float y)
+    {
+        var row = NewUI("BriRow", parent);
+        var rr = row.GetComponent<RectTransform>();
+        rr.anchorMin = new Vector2(0, 1); rr.anchorMax = new Vector2(1, 1);
+        rr.pivot = new Vector2(0, 1f); rr.sizeDelta = new Vector2(0, 32);
+        rr.anchoredPosition = new Vector2(0, y);
+
+        var lblObj = NewUI("Lbl", row.transform);
+        var lr = lblObj.GetComponent<RectTransform>();
+        lr.anchorMin = Vector2.zero; lr.anchorMax = new Vector2(0.15f, 1f);
+        lr.offsetMin = lr.offsetMax = Vector2.zero;
+        var lt = lblObj.AddComponent<Text>();
+        lt.font = Font(); lt.text = "亮度"; lt.fontSize = 15; lt.color = InkBlack; lt.alignment = TextAnchor.MiddleRight;
+
+        var sliderObj = NewUI("Slider", row.transform);
+        var sr = sliderObj.GetComponent<RectTransform>();
+        sr.anchorMin = new Vector2(0.18f, 0.15f); sr.anchorMax = new Vector2(0.75f, 0.85f);
+        sr.offsetMin = sr.offsetMax = Vector2.zero;
+
+        var bgObj = NewUI("BG", sliderObj.transform);
+        Stretch(bgObj);
+        bgObj.AddComponent<Image>().color = new Color(0.85f, 0.82f, 0.75f);
+
+        var fillArea = NewUI("FillArea", sliderObj.transform);
+        var far = fillArea.GetComponent<RectTransform>();
+        far.anchorMin = Vector2.zero; far.anchorMax = Vector2.one;
+        far.offsetMin = far.offsetMax = Vector2.zero;
+        var fill = NewUI("Fill", fillArea.transform);
+        Stretch(fill);
+        var fillImg = fill.AddComponent<Image>();
+        fillImg.color = GoldColor;
+
+        var handleArea = NewUI("HandleArea", sliderObj.transform);
+        Stretch(handleArea);
+        var handle = NewUI("Handle", handleArea.transform);
+        var hr = handle.GetComponent<RectTransform>();
+        hr.anchorMin = hr.anchorMax = new Vector2(0.5f, 0.5f);
+        hr.sizeDelta = new Vector2(24, 24);
+        var handleImg = handle.AddComponent<Image>();
+        handleImg.color = GoldColor;
+
+        var slider = sliderObj.AddComponent<Slider>();
+        slider.targetGraphic = handleImg;
+        slider.fillRect = fill.GetComponent<RectTransform>();
+        slider.handleRect = handle.GetComponent<RectTransform>();
+        slider.direction = Slider.Direction.LeftToRight;
+        slider.minValue = 0.3f;
+        slider.maxValue = 1f;
+        slider.value = GameManager.Instance.brightness;
+
+        var pctObj = NewUI("Pct", row.transform);
+        var pctR = pctObj.GetComponent<RectTransform>();
+        pctR.anchorMin = new Vector2(0.78f, 0); pctR.anchorMax = new Vector2(1f, 1f);
+        pctR.offsetMin = pctR.offsetMax = Vector2.zero;
+        var pctTxt = pctObj.AddComponent<Text>();
+        pctTxt.font = Font(); pctTxt.fontSize = 15; pctTxt.color = InkBlack; pctTxt.alignment = TextAnchor.MiddleCenter;
+
+        void OnBriChanged(float v)
+        {
+            GameManager.Instance.brightness = v;
+            pctTxt.text = Mathf.RoundToInt((v - 0.3f) / 0.7f * 100) + "%";
+            GameManager.Instance.SaveSettings();
+            // 通过亮度覆盖层调整屏幕亮度
+            UpdateBrightnessOverlay(v);
+        }
+        slider.onValueChanged.AddListener(OnBriChanged);
+        OnBriChanged(slider.value);
+
+        return y - 40f;
+    }
+
+    private GameObject brightnessOverlay;
+
+    private void UpdateBrightnessOverlay(float brightness)
+    {
+        if (brightnessOverlay == null)
+        {
+            brightnessOverlay = NewUI("BrightnessOverlay", rootT);
+            Stretch(brightnessOverlay);
+            var img = brightnessOverlay.AddComponent<Image>();
+            img.color = new Color(0, 0, 0, 0);
+            img.raycastTarget = false;
+            // 放到最顶层，不拦截点击，仅做视觉暗化
+            brightnessOverlay.transform.SetAsLastSibling();
+        }
+        // brightness 1.0=正常, 0.3=最暗 → 映射为遮罩 alpha 0~0.55
+        float alpha = Mathf.Lerp(0.55f, 0f, (brightness - 0.3f) / 0.7f);
+        brightnessOverlay.GetComponent<Image>().color = new Color(0, 0, 0, alpha);
+        // 始终保持最顶层（确保新创建的 UI 不会跑到它上面）
+        brightnessOverlay.transform.SetAsLastSibling();
     }
 
     private float AddAvatarSelector(Transform parent, float y)
@@ -1102,6 +1210,24 @@ public class MainPanel : UIFrame
     }
 
     private void TogglePanel(GameObject p) { if (p != null) p.SetActive(!p.activeSelf); }
+
+    private GameObject logoutConfirmDialog;
+
+    private void ShowLogoutConfirm()
+    {
+        if (logoutConfirmDialog == null)
+        {
+            logoutConfirmDialog = MakeConfirmDialog(rootT, "确认退出",
+                "确定要退出当前账号吗？\n您的收藏数据已自动保存。", ZhuRed,
+                () =>
+                {
+                    GameManager.Instance.Logout();
+                    ShowToast("已安全退出", JadeGreen);
+                    SceneLoader.Instance.LoadScene(SceneNames.Login);
+                });
+        }
+        logoutConfirmDialog.SetActive(true);
+    }
 
     private void OnDestroy()
     {

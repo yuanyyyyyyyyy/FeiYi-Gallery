@@ -42,16 +42,16 @@ Assets/
 │   │   ├── KnowledgeData.cs       # 知识数据结构 + 答题数据结构
 │   │   └── EventData.cs           # 事件数据结构
 │   ├── UI/
-│   │   └── UIFrame.cs             # UI基类（所有场景管理器的父类，含主题系统）
+│   │   └── UIFrame.cs             # UI基类（所有场景管理器的父类，含主题系统+确认对话框）
 │   ├── Login/
-│   │   └── LoginManager.cs        # 登录场景管理器
+│   │   └── LoginManager.cs        # 登录场景管理器（含记住密码+自动填充）
 │   ├── Start/
-│   │   └── StartPanel.cs          # 欢迎页管理器
+│   │   └── StartPanel.cs          # 欢迎页管理器（含首次使用自动引导）
 │   ├── Main/
-│   │   └── MainPanel.cs           # 主页管理器（卷轴画卷+背包+设置+3D角色）
+│   │   └── MainPanel.cs           # 主页管理器（卷轴画卷+背包+设置+3D角色+亮度调节+退出确认）
 │   ├── Exhibit/
-│   │   ├── ExhibitManager.cs      # 展品场景管理器（3D模型+抽屉面板+缩略图）
-│   │   └── ModelRotator.cs        # 3D模型旋转缩放交互
+│   │   ├── ExhibitManager.cs      # 展品场景管理器（3D模型+抽屉面板+缩略图+点击交互）
+│   │   └── ModelRotator.cs        # 3D模型旋转缩放+点击交互
 │   ├── Knowledge/
 │   │   └── KnowledgeManager.cs    # 知识场景管理器（浏览+答题）
 │   ├── Event/
@@ -59,7 +59,7 @@ Assets/
 │   ├── Backpack/
 │   │   └── BackpackManager.cs     # 背包/收藏管理器
 │   ├── Character/
-│   │   ├── CharacterController2D.cs # 3D角色控制器（状态机）
+│   │   ├── CharacterController2D.cs # 3D角色控制器（4状态状态机：Idle/Walking/Jumping/Interacting）
 │   │   └── CharacterState.cs      # 角色状态枚举
 │   └── Help/
 │       └── HelpManager.cs         # 帮助内容提供者（引导步骤+FAQ）
@@ -99,6 +99,7 @@ UIFrame : MonoBehaviour（抽象基类）
 - 新中式风格的 UI 组件（印章图标、分隔线、弹窗等）
 - 动画效果（淡入淡出、脉冲、提示条）
 - 主题切换系统（3种主题色板）
+- 确认对话框（`MakeConfirmDialog`）
 
 把这些公共方法抽到基类，每个场景管理器只需实现自己的 `CreateUI()` 方法。
 
@@ -112,7 +113,8 @@ UIFrame : MonoBehaviour（抽象基类）
 | `AddLabel()` / `AddBtn()` / `AddInputField()` | 文字/按钮/输入框 |
 | `AddSealLogo()` / `AddSealIcon()` | 红色印章装饰 |
 | `AddDivider()` | "─── 文字 ───" 风格分隔线 |
-| `MakeOverlay()` | 模态弹窗 |
+| `MakeOverlay()` | 模态弹窗（仅 X 按钮关闭，ScrollRect 可滚动） |
+| `MakeConfirmDialog()` | 确认对话框（标题+提示+确认/取消按钮） |
 | `FadeIn()` / `FadeOut()` / `ShowToast()` | 动画效果 |
 | `AddInkWashCorners()` | 水墨晕染四角 |
 | `EnsureSingletons()` | 确保 GameManager + SceneLoader + AudioManager 存在 |
@@ -209,6 +211,7 @@ Canvas (ScreenSpaceOverlay)
     │   ├── 分隔线
     │   ├── 用户名输入框
     │   ├── 密码输入框
+    │   ├── 记住密码 Toggle（勾选后保存加密密码，下次自动填充）
     │   ├── 登录按钮 / 注册按钮
     │   └── 提示消息文字
     └── 水墨晕染四角
@@ -217,6 +220,7 @@ Canvas (ScreenSpaceOverlay)
 **关键逻辑**：
 - **注册**：用户名≥2字符，密码≥4字符，密码用 XOR(0x5A) + Base64 加密存入 `PlayerPrefs`
 - **登录**：验证用户名是否存在，解密密码比对
+- **记住密码**：勾选后保存加密密码到 `PlayerPrefs`，下次启动自动填充用户名和密码
 - **跳转**：登录成功后 `FadeOut` 动画 → `SceneLoader.LoadScene(StartScene)`
 
 ### 5.2 StartScene — 欢迎页
@@ -237,6 +241,8 @@ Canvas (ScreenSpaceOverlay)
     └── 引导弹窗（6步使用指南）
 ```
 
+**首次使用引导**：检测 `PlayerPrefs.HasKey("HasSeenGuide")`，首次启动自动弹出引导弹窗，后续可手动点击"使用引导"查看。
+
 ### 5.3 MainScene — 品类选择主页
 
 **脚本**：`MainPanel : UIFrame`
@@ -246,6 +252,7 @@ Canvas (ScreenSpaceOverlay)
 Canvas (ScreenSpaceOverlay)
 └── Root
     ├── 背景（宣纸米白 + 水墨晕染四角）
+    ├── 亮度遮罩层（半透明黑色叠加，拖动亮度滑块时实时调整）
     ├── Header（印章小图标 + 标题 + 头像 + 用户名）
     ├── ScrollView（横向滚动，4张品类卡片）
     │   └── Content (HorizontalLayoutGroup + ContentSizeFitter)
@@ -253,19 +260,22 @@ Canvas (ScreenSpaceOverlay)
     │       ├── 卡片2：剪纸
     │       ├── 卡片3：书法
     │       └── 卡片4：民族乐器
-    ├── 3D角色展示区（RenderTexture + 正交相机 + 自动走动小人）
+    ├── 3D角色展示区（RenderTexture + 正交相机 + 自动走动小人，点击触发跳跃）
     ├── 功能入口（知识探索 + 历史故事）
     ├── NavBar（背包/设置/帮助/退出，竹简风格）
-    ├── 设置弹窗（音量/主题/头像/密码）
-    ├── 帮助弹窗（HelpManager 引导+FAQ）
-    └── 背包弹窗（收藏列表 + 删除）
+    ├── 设置弹窗（音量/亮度/主题/头像/密码，确认修改按钮）
+    ├── 帮助弹窗（HelpManager 引导+FAQ，ScrollRect 可滚动）
+    ├── 背包弹窗（收藏列表 + 搜索 + 品类筛选 + 删除）
+    └── 退出确认对话框（确认/取消，Toast 提示"已安全退出"）
 ```
 
 **关键设计**：
 - **卷轴画卷式布局**：`ScrollRect` + `HorizontalLayoutGroup` + `ContentSizeFitter`
-- **3D角色**：程序化几何体拼接的低多边形小人，3种状态（Idle/Walking/Interacting），自动在场景中走动
-- **设置面板**：4个功能区（音量滑块、主题切换、头像选择、密码修改）
-- **帮助弹窗**：从 `HelpManager` 动态读取引导步骤和FAQ
+- **3D角色**：程序化几何体拼接的低多边形小人，4种状态（Idle/Walking/Jumping/Interacting），自动走动+点击跳跃
+- **设置面板**：5个功能区（音量滑块、亮度滑块+遮罩层、主题切换、头像选择、密码修改）
+- **亮度调节**：拖动滑块调整半透明黑色遮罩层的 alpha（0~0.55），视觉上实现屏幕变暗/变亮
+- **退出确认**：点击退出弹出 `MakeConfirmDialog` 确认对话框，确认后 `ShowToast("已安全退出")`
+- **帮助弹窗**：从 `HelpManager` 动态读取引导步骤和FAQ，ScrollRect 可滚动
 
 ### 5.4 ExhibitScene — 展品 3D 展示页
 
@@ -277,12 +287,12 @@ Canvas (ScreenSpaceCamera, planeDistance=20)
 └── Root
     ├── Header（返回 + 展品名 + 收藏按钮）
     ├── Quote（引用语浮层）
-    ├── Drawer（底部抽屉面板）
+    ├── Drawer（底部抽屉面板，点击3D模型自动展开）
     │   ├── Handle 拉手柄
     │   ├── TabBar（历史背景 / 制作工艺 / 文化寓意）
     │   ├── 缩略图（3D模型RenderTexture预览）
-    │   └── DrawerContent（正文文字）
-    └── Footer（上一个 / 收藏 / 下一个）
+    │   └── TextScroll（正文文字，ScrollRect可滚动）
+    └── Footer（上一个 / 分享 / 收藏 / 下一个）
 ```
 
 **3D 模型全部用 Unity 基础几何体拼接**：
@@ -296,7 +306,12 @@ Canvas (ScreenSpaceCamera, planeDistance=20)
 | 古筝 | Cube 琴身 + 8个 Cube 琴弦 |
 | 二胡 | Cylinder 琴杆 + Cylinder 琴筒 |
 
-**缩略图系统**：抽屉面板顶部展示 3D 模型的 RenderTexture 缩略图预览，使用独立正交相机渲染。
+**3D 模型交互**：
+- **拖拽旋转**：鼠标左键拖拽旋转模型
+- **滚轮缩放**：鼠标滚轮缩放模型大小
+- **点击交互**：短距离点击（<8px位移）触发弹跳动画，自动展开详情抽屉
+- **自动旋转**：模型默认缓慢自转，拖拽时暂停
+- **缩略图系统**：抽屉面板顶部展示 3D 模型的 RenderTexture 缩略图预览
 
 ### 5.5 KnowledgeScene — 知识探索 + 答题
 
@@ -355,6 +370,7 @@ public class ExhibitData {
 | Key | 内容 | 示例 |
 |-----|------|------|
 | `User_{用户名}_Password` | XOR加密+Base64的密码 | |
+| `User_{用户名}_RememberPwd` | 记住的加密密码（勾选"记住密码"时保存） | |
 | `User_{用户名}_Avatar` | 头像索引 (0-5) | 0 |
 | `LastUser` | 上次登录的用户名 | "admin" |
 | `LoginTime` | 上次登录时间 | "2026-06-10" |
@@ -363,6 +379,7 @@ public class ExhibitData {
 | `Volume` | 音量设置 | 0.8 |
 | `Brightness` | 亮度设置 | 1.0 |
 | `ThemeStyle` | 主题风格 | "default"/"classic"/"minimal" |
+| `HasSeenGuide` | 是否已看过新手引导 | 1 |
 
 ### 6.5 背包系统
 
@@ -371,6 +388,11 @@ public class ExhibitData {
 **双重持久化**：
 - `PlayerPrefs`：快速读写
 - JSON 文件：完整备份（`persistentDataPath/Backpack/{username}_backpack.json`）
+
+**功能**：
+- 按品类筛选（全部/瓷器/剪纸/书法/乐器）
+- 搜索展品（实时过滤）
+- 删除收藏
 
 ---
 
@@ -404,11 +426,12 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 ### 7.3 3D 角色系统
 
 主页展示的低多边形小人，使用状态机控制：
-- **Idle** — 站立等待
-- **Walking** — 走向随机目标位置
-- **Interacting** — 点击品类卡片时触发挥手
+- **Idle** — 站立等待（轻微上下浮动+手臂微摆）
+- **Walking** — 走向随机目标位置（腿臂交替摆动）
+- **Jumping** — 跳跃（抛物线Y轴位移+腿收起+手臂上举，0.6秒后回到Idle）
+- **Interacting** — 点击品类卡片时触发挥手（1.2秒后回到Idle）
 
-角色通过 `RenderTexture` + 正交相机渲染到 UI 上，自动在场景中走动。
+角色通过 `RenderTexture` + 正交相机渲染到 UI 上，自动在场景中走动。点击角色展示区可触发跳跃动画。
 
 ### 7.4 音频系统
 
@@ -416,7 +439,15 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 - **SFX**：4种（click/flip/collect/toast）
 - **音量控制**：设置面板滑块实时调节，AudioListener.volume 全局控制
 
-### 7.5 坑与经验
+### 7.5 亮度调节系统
+
+设置面板中的亮度滑块控制一个全屏半透明黑色遮罩层的 alpha 值：
+- 亮度 1.0（最亮）→ 遮罩 alpha = 0（完全透明）
+- 亮度 0.3（最暗）→ 遮罩 alpha = 0.55（半透明黑色叠加）
+
+遮罩层设 `raycastTarget=false` 不拦截点击，`SetAsLastSibling()` 始终在最顶层渲染。
+
+### 7.6 坑与经验
 
 | 问题 | 原因 | 解决方案 |
 |------|------|---------|
@@ -427,6 +458,10 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 | 展品旋转极慢 | 鼠标 delta 乘了 Time.deltaTime 导致双重缩小 | 去掉 deltaTime，直接用 delta * rotateSpeed |
 | 主题切换不生效 | 颜色常量为 readonly | 改为静态属性，根据 GameManager.themeStyle 动态返回 |
 | 2个 AudioListener 警告 | AudioManager 创建时场景已有 Listener | 自动检测并销毁多余的 Listener |
+| 背包展品不显示 | MakeOverlay 改为 ScrollRect 后路径变更 | `Panel/C` → `Panel/Viewport/C`，并销毁 ContentSizeFitter 重置 RectTransform |
+| 弹窗点击穿透关闭 | 遮罩层添加了 Button 组件 | 移除遮罩 Button，设 `raycastTarget=true` 仅拦截点击 |
+| 抽屉文字空白 | 文字用固定 offsetMax=-110px，小屏幕下高度变负 | 改为 ScrollRect + 锚点比例布局，自适应任意高度 |
+| X 按钮不显示文字 | ✕ 字符不在 LegacyRuntime 字体中 | 改为 ASCII "X" |
 
 ---
 
@@ -437,6 +472,7 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 3. 点击 Play 运行
 4. 注册新用户 → 登录 → 开始探索 → 选择品类 → 查看 3D 展品
 5. 可在设置中切换主题风格（默认/古典/简约）
+6. 勾选"记住密码"后下次启动自动填充
 
 **测试账号**：任意用户名（≥2字符）+ 任意密码（≥4字符）先注册再登录
 

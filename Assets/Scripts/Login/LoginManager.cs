@@ -12,6 +12,7 @@ public class LoginManager : UIFrame
 
     private InputField usernameInput;
     private InputField passwordInput;
+    private Toggle rememberPwdToggle;
     private Text messageText;
     private CanvasGroup rootCanvasGroup;
 
@@ -21,6 +22,17 @@ public class LoginManager : UIFrame
         CreateUI();
         string lastUser = PlayerPrefs.GetString("LastUser", "");
         if (!string.IsNullOrEmpty(lastUser)) usernameInput.text = lastUser;
+
+        // 自动填充记住的密码
+        if (!string.IsNullOrEmpty(lastUser))
+        {
+            string rememberedPwd = PlayerPrefs.GetString($"User_{lastUser}_RememberPwd", "");
+            if (!string.IsNullOrEmpty(rememberedPwd))
+            {
+                passwordInput.text = GameManager.DecryptPassword(rememberedPwd);
+                if (rememberPwdToggle != null) rememberPwdToggle.isOn = true;
+            }
+        }
     }
 
     private void CreateUI()
@@ -74,11 +86,44 @@ public class LoginManager : UIFrame
             "密码", 15, InkBlack);
         passwordInput = AddInputField("PInput", panel.transform, new Vector2(0, -360), new Vector2(320, 40), "请输入密码", true);
 
+        // 记住密码 Toggle
+        var toggleObj = NewUI("RememberPwd", panel.transform);
+        var tgr = toggleObj.GetComponent<RectTransform>();
+        tgr.anchorMin = tgr.anchorMax = new Vector2(0.5f, 1f);
+        tgr.pivot = new Vector2(0.5f, 1f);
+        tgr.sizeDelta = new Vector2(320, 24);
+        tgr.anchoredPosition = new Vector2(0, -405);
+
+        var toggleBg = NewUI("BG", toggleObj.transform);
+        var bgR = toggleBg.GetComponent<RectTransform>();
+        bgR.anchorMin = Vector2.zero; bgR.anchorMax = Vector2.one;
+        bgR.offsetMin = new Vector2(0, 2); bgR.offsetMax = new Vector2(-200, -2);
+        var toggleBgImg = toggleBg.AddComponent<Image>();
+        toggleBgImg.color = XuanPaper;
+
+        var checkMark = NewUI("Check", toggleBg.transform);
+        Stretch(checkMark);
+        var checkImg = checkMark.AddComponent<Image>();
+        checkImg.color = ZhuRed;
+        checkImg.raycastTarget = false;
+
+        var toggleLabel = NewUI("Label", toggleObj.transform);
+        var lblR = toggleLabel.GetComponent<RectTransform>();
+        lblR.anchorMin = Vector2.zero; lblR.anchorMax = Vector2.one;
+        lblR.offsetMin = new Vector2(28, 0); lblR.offsetMax = Vector2.zero;
+        var lblTxt = toggleLabel.AddComponent<Text>();
+        lblTxt.font = Font(); lblTxt.text = "记住密码"; lblTxt.fontSize = 14; lblTxt.color = InkBlack; lblTxt.alignment = TextAnchor.MiddleLeft;
+
+        rememberPwdToggle = toggleObj.AddComponent<Toggle>();
+        rememberPwdToggle.targetGraphic = toggleBgImg;
+        rememberPwdToggle.graphic = checkImg;
+        rememberPwdToggle.isOn = false;
+
         // 登录按钮
-        var loginBtn = AddBtn("LoginBtn", panel.transform, new Vector2(0, -420), new Vector2(320, 48), "登  录", ZhuRed);
+        var loginBtn = AddBtn("LoginBtn", panel.transform, new Vector2(0, -445), new Vector2(320, 48), "登  录", ZhuRed);
 
         // 注册按钮
-        var regBtn = AddBtn("RegBtn", panel.transform, new Vector2(0, -485), new Vector2(320, 48), "注  册", GoldColor);
+        var regBtn = AddBtn("RegBtn", panel.transform, new Vector2(0, -510), new Vector2(320, 48), "注  册", GoldColor);
 
         // 提示信息
         var msgObj = NewUI("Msg", panel.transform);
@@ -86,7 +131,7 @@ public class LoginManager : UIFrame
         mr.anchorMin = mr.anchorMax = new Vector2(0.5f, 1f);
         mr.pivot = new Vector2(0.5f, 1f);
         mr.sizeDelta = new Vector2(360, 26);
-        mr.anchoredPosition = new Vector2(0, -525);
+        mr.anchoredPosition = new Vector2(0, -565);
         messageText = msgObj.AddComponent<Text>();
         messageText.font = Font();
         messageText.fontSize = 15;
@@ -110,6 +155,12 @@ public class LoginManager : UIFrame
             { ShowMsg("用户不存在，请先注册", errorColor); return; }
             if (GameManager.EncryptPassword(p) == stored)
             {
+                // 保存/清除记住的密码
+                if (rememberPwdToggle != null && rememberPwdToggle.isOn)
+                    PlayerPrefs.SetString($"User_{u}_RememberPwd", GameManager.EncryptPassword(p));
+                else
+                    PlayerPrefs.DeleteKey($"User_{u}_RememberPwd");
+
                 ShowMsg("登录成功！", successColor);
                 GameManager.Instance.Login(u);
                 StartCoroutine(FadeOut(rootCanvasGroup, 0.6f, () =>

@@ -328,13 +328,30 @@ public class ExhibitManager : UIFrame
         thumbCam.cullingMask = 1 << 0; // Default layer (3D models)
         thumbCamObj.SetActive(false);
 
-        // 正文文字
-        var txtObj = NewUI("Text", drawerContent.transform);
+        // 正文文字 — ScrollRect 可滚动区域，避免固定像素偏移在不同屏幕尺寸下裁剪
+        var scrollView = NewUI("TextScroll", drawerContent.transform);
+        var svR = scrollView.GetComponent<RectTransform>();
+        // 文字区域：底部6%到缩略图下方（约35%位置）
+        svR.anchorMin = new Vector2(0.03f, 0.06f);
+        svR.anchorMax = new Vector2(0.97f, 0.92f);
+        svR.offsetMin = svR.offsetMax = Vector2.zero;
+        var svImg = scrollView.AddComponent<Image>();
+        svImg.color = new Color(1, 1, 1, 0);
+        svImg.raycastTarget = true;
+
+        var svViewport = NewUI("Viewport", scrollView.transform);
+        Stretch(svViewport);
+        var svVpImg = svViewport.AddComponent<Image>();
+        svVpImg.color = Color.white;
+        svVpImg.raycastTarget = true;
+        svViewport.AddComponent<Mask>().showMaskGraphic = false;
+
+        var txtObj = NewUI("Text", svViewport.transform);
         var txtr = txtObj.GetComponent<RectTransform>();
-        txtr.anchorMin = new Vector2(0.06f, 0.06f);
-        txtr.anchorMax = new Vector2(0.94f, 0.94f);
-        txtr.offsetMin = txtr.offsetMax = Vector2.zero;
-        txtr.offsetMax = new Vector2(0, -110);
+        txtr.anchorMin = new Vector2(0, 1);
+        txtr.anchorMax = new Vector2(1, 1);
+        txtr.pivot = new Vector2(0.5f, 1f);
+        txtr.sizeDelta = new Vector2(0, 0);
         drawerContentText = txtObj.AddComponent<Text>();
         drawerContentText.font = Font();
         drawerContentText.fontSize = 17;
@@ -342,6 +359,17 @@ public class ExhibitManager : UIFrame
         drawerContentText.alignment = TextAnchor.UpperLeft;
         drawerContentText.lineSpacing = 1.6f;
         drawerContentText.supportRichText = true;
+
+        var csf = txtObj.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var scrollRect = scrollView.AddComponent<ScrollRect>();
+        scrollRect.content = txtr;
+        scrollRect.viewport = svViewport.GetComponent<RectTransform>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.inertia = true;
 
         drawerContent.SetActive(false);
     }
@@ -490,7 +518,8 @@ public class ExhibitManager : UIFrame
         disk.GetComponent<Renderer>().material.color = PedestalColor;
 
         currentModel = CreateModel(data.modelType, data.id);
-        currentModel.AddComponent<ModelRotator>();
+        var rotator = currentModel.AddComponent<ModelRotator>();
+        rotator.onModelClicked = OnModelClicked;
 
         exhibitNameText.text = data.category + " - " + data.name;
         quoteText.text = $"\"{data.description}\"";
@@ -568,6 +597,19 @@ public class ExhibitManager : UIFrame
         obj.transform.localPosition = pos;
         obj.GetComponent<Renderer>().material.color = color;
         return obj;
+    }
+
+    // ──────────────────── 3D 模型点击交互 ────────────────────
+
+    private void OnModelClicked()
+    {
+        SfxClick();
+        // 自动打开抽屉详情面板
+        if (!drawerOpen)
+        {
+            drawerOpen = true;
+            StartCoroutine(AnimateDrawer(true));
+        }
     }
 
     // ──────────────────── 导航 ────────────────────

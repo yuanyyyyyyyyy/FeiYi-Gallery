@@ -64,6 +64,14 @@ public class StartPanel : UIFrame
 
         // 引导弹窗
         CreateGuidePanel(root);
+
+        // 首次使用自动弹出引导
+        if (!PlayerPrefs.HasKey("HasSeenGuide"))
+        {
+            if (guidePanel != null) guidePanel.SetActive(true);
+            PlayerPrefs.SetInt("HasSeenGuide", 1);
+            PlayerPrefs.Save();
+        }
     }
 
     private void CreateGuidePanel(Transform parent)

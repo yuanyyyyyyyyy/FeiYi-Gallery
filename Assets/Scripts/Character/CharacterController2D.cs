@@ -17,6 +17,10 @@ public class CharacterController2D : MonoBehaviour
     public float walkArmSwingAmount = 25f;
     public float interactSpinSpeed = 720f;
 
+    [Header("跳跃设置")]
+    public float jumpHeight = 0.8f;
+    public float jumpDuration = 0.6f;
+
     // 状态机
     private CharacterState currentState = CharacterState.Idle;
     private float stateTimer;
@@ -71,6 +75,9 @@ public class CharacterController2D : MonoBehaviour
                 break;
             case CharacterState.Walking:
                 UpdateWalking();
+                break;
+            case CharacterState.Jumping:
+                UpdateJumping();
                 break;
             case CharacterState.Interacting:
                 UpdateInteracting();
@@ -170,6 +177,54 @@ public class CharacterController2D : MonoBehaviour
         }
     }
 
+    private void UpdateJumping()
+    {
+        // 抛物线跳跃：stateTimer 0→jumpDuration
+        float t = Mathf.Clamp01(stateTimer / jumpDuration);
+        // 抛物线高度：h = 4*jumpHeight*t*(1-t)
+        float h = 4f * jumpHeight * t * (1f - t);
+
+        // 腿收起
+        if (leftLegTransform != null)
+            leftLegTransform.localRotation = Quaternion.Euler(-30f * (1f - t), 0, 0);
+        if (rightLegTransform != null)
+            rightLegTransform.localRotation = Quaternion.Euler(-30f * (1f - t), 0, 0);
+
+        // 手臂上举
+        if (leftArmTransform != null)
+            leftArmTransform.localRotation = Quaternion.Euler(-60f * (1f - t), 0, 0);
+        if (rightArmTransform != null)
+            rightArmTransform.localRotation = Quaternion.Euler(-60f * (1f - t), 0, 0);
+
+        // 身体整体上移
+        if (bodyTransform != null)
+            bodyTransform.localPosition = new Vector3(0, 0.8f + h, 0);
+        if (headTransform != null)
+            headTransform.localPosition = new Vector3(0, 1.55f + h, 0);
+        if (leftArmTransform != null)
+            leftArmTransform.localPosition = new Vector3(-0.35f, 0.85f + h, 0);
+        if (rightArmTransform != null)
+            rightArmTransform.localPosition = new Vector3(0.35f, 0.85f + h, 0);
+        if (leftLegTransform != null)
+            leftLegTransform.localPosition = new Vector3(-0.12f, 0.2f + h * 0.3f, 0);
+        if (rightLegTransform != null)
+            rightLegTransform.localPosition = new Vector3(0.12f, 0.2f + h * 0.3f, 0);
+
+        // 跳跃结束
+        if (stateTimer >= jumpDuration)
+        {
+            ResetParts();
+            // 复位位置
+            if (bodyTransform != null) bodyTransform.localPosition = new Vector3(0, 0.8f, 0);
+            if (headTransform != null) headTransform.localPosition = new Vector3(0, 1.55f, 0);
+            if (leftArmTransform != null) leftArmTransform.localPosition = new Vector3(-0.35f, 0.85f, 0);
+            if (rightArmTransform != null) rightArmTransform.localPosition = new Vector3(0.35f, 0.85f, 0);
+            if (leftLegTransform != null) leftLegTransform.localPosition = new Vector3(-0.12f, 0.2f, 0);
+            if (rightLegTransform != null) rightLegTransform.localPosition = new Vector3(0.12f, 0.2f, 0);
+            ChangeState(CharacterState.Idle);
+        }
+    }
+
     #endregion
 
     #region Public Methods
@@ -191,6 +246,15 @@ public class CharacterController2D : MonoBehaviour
     public void Interact()
     {
         ChangeState(CharacterState.Interacting);
+    }
+
+    /// <summary>
+    /// 触发跳跃动画
+    /// </summary>
+    public void Jump()
+    {
+        if (currentState == CharacterState.Jumping) return;
+        ChangeState(CharacterState.Jumping);
     }
 
     /// <summary>
