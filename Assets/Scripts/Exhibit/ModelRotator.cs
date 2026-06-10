@@ -6,12 +6,12 @@ using UnityEngine;
 public class ModelRotator : MonoBehaviour
 {
     [Header("旋转设置")]
-    public float rotateSpeed = 5f;
+    public float rotateSpeed = 0.35f;
     public bool autoRotate = true;
     public float autoRotateSpeed = 30f;
 
     [Header("缩放设置")]
-    public float zoomSpeed = 2f;
+    public float zoomSpeed = 3f;
     public float minScale = 0.3f;
     public float maxScale = 3f;
 
@@ -40,8 +40,8 @@ public class ModelRotator : MonoBehaviour
         if (isDragging && Input.GetMouseButton(0))
         {
             Vector3 delta = Input.mousePosition - lastMousePos;
-            transform.Rotate(Vector3.up, -delta.x * rotateSpeed * Time.deltaTime, Space.World);
-            transform.Rotate(Vector3.right, delta.y * rotateSpeed * Time.deltaTime, Space.World);
+            transform.Rotate(Vector3.up, -delta.x * rotateSpeed, Space.World);
+            transform.Rotate(Vector3.right, delta.y * rotateSpeed, Space.World);
             lastMousePos = Input.mousePosition;
         }
 

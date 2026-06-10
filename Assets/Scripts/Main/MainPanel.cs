@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
@@ -17,6 +18,7 @@ public class MainPanel : UIFrame
 
     private GameObject backpackPanel, settingsPanel, helpPanel;
     private Transform canvasTRef;
+    private CharacterController2D character;
 
     private void Start()
     {
@@ -44,6 +46,9 @@ public class MainPanel : UIFrame
 
         // ── 卷轴 ScrollView 区域 ──
         CreateScrollView(root);
+
+        // ── 3D 角色展示区 ──
+        CreateCharacterStage(root);
 
         // ── 功能入口：知识探索 + 历史故事 ──
         CreateFeatureEntry(root);
@@ -218,6 +223,206 @@ public class MainPanel : UIFrame
         }
     }
 
+    // ──────────────────── 3D 角色展示区 ────────────────────
+
+    private RenderTexture charRT;
+    private Camera charCam;
+    private GameObject charStageRoot;
+    private float charWalkTimer;
+    private float nextWalkDelay = 3f;
+
+    private void CreateCharacterStage(Transform parent)
+    {
+        // UI 区域：在 ScrollView 下方、FeatureEntry 上方
+        var stageUI = NewUI("CharStage", parent);
+        var sr = stageUI.GetComponent<RectTransform>();
+        sr.anchorMin = new Vector2(0.02f, 0.27f);
+        sr.anchorMax = new Vector2(0.98f, 0.42f);
+        sr.offsetMin = sr.offsetMax = Vector2.zero;
+
+        // 3D 场景根对象（先创建以确定 layer）
+        int charLayer = 8;
+        charStageRoot = new GameObject("[CharStage]");
+        charStageRoot.layer = charLayer;
+
+        // 宣纸色地面
+        var ground = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        ground.name = "Ground";
+        ground.transform.SetParent(charStageRoot.transform);
+        ground.transform.position = new Vector3(0, 0, 0);
+        ground.transform.rotation = Quaternion.Euler(90, 0, 0);
+        ground.transform.localScale = new Vector3(14f, 2f, 1f);
+        var gMat = new Material(Shader.Find("Unlit/Color"));
+        gMat.color = new Color(0.93f, 0.89f, 0.82f);
+        ground.GetComponent<Renderer>().material = gMat;
+        ground.layer = charLayer;
+        Object.Destroy(ground.GetComponent<Collider>());
+
+        // 创建3D角色
+        Create3DCharacter(charStageRoot.transform, charLayer);
+
+        // 计算UI区域实际像素尺寸，匹配RenderTexture宽高比
+        // 先用合理尺寸创建RT，Start后用实际尺寸更新
+        charRT = new RenderTexture(960, 160, 24, RenderTextureFormat.ARGB32);
+        charRT.name = "CharRT";
+
+        // 专用正交相机 — 角色总高约1.8（脚y=0 头顶y≈1.75），相机对准0.9
+        var camObj = new GameObject("CharCam");
+        camObj.transform.SetParent(charStageRoot.transform);
+        camObj.layer = charLayer;
+        charCam = camObj.AddComponent<Camera>();
+        charCam.orthographic = true;
+        // orthoSize=半高，角色高1.8，留边距→1.1（可见范围y: -0.2到2.0）
+        charCam.orthographicSize = 1.1f;
+        charCam.clearFlags = CameraClearFlags.SolidColor;
+        charCam.backgroundColor = new Color(0.96f, 0.90f, 0.78f, 0f);
+        charCam.targetTexture = charRT;
+        charCam.cullingMask = 1 << charLayer;
+        camObj.transform.position = new Vector3(0, 0.9f, -6f);
+        camObj.transform.rotation = Quaternion.identity;
+
+        // RawImage 显示3D渲染结果
+        var rawImg = stageUI.AddComponent<RawImage>();
+        rawImg.texture = charRT;
+        rawImg.raycastTarget = false;
+        rawImg.color = Color.white;
+
+        // 启动自动走动协程
+        StartCoroutine(AutoWalkCoroutine());
+        // 延迟一帧后根据实际UI尺寸调整RenderTexture
+        StartCoroutine(AdjustRTSize());
+    }
+
+    private IEnumerator AdjustRTSize()
+    {
+        yield return null; // 等一帧让Layout计算完成
+        var stageUI = GameObject.Find("CharStage");
+        if (stageUI != null)
+        {
+            var rt = stageUI.GetComponent<RectTransform>();
+            float w = rt.rect.width;
+            float h = rt.rect.height;
+            if (w > 0 && h > 0 && charRT != null)
+            {
+                int rtW = Mathf.ClosestPowerOfTwo((int)w);
+                int rtH = Mathf.ClosestPowerOfTwo((int)h);
+                // 确保最小尺寸
+                rtW = Mathf.Max(rtW, 128);
+                rtH = Mathf.Max(rtH, 64);
+                charRT.Release();
+                charRT.width = rtW;
+                charRT.height = rtH;
+                charRT.Create();
+                // 调整相机orthoSize匹配RT比例
+                float aspect = (float)rtW / rtH;
+                charCam.orthographicSize = 1.1f; // 高度方向半高
+                // 调整相机宽高比不会裁剪角色（orthoSize控制垂直，宽度自动）
+            }
+        }
+    }
+
+    private void Create3DCharacter(Transform parent, int layer)
+    {
+        var charObj = new GameObject("Character");
+        charObj.transform.SetParent(parent);
+        charObj.transform.position = new Vector3(0, 0, 0);
+        charObj.layer = layer;
+
+        // 材质
+        var bodyMat = new Material(Shader.Find("Unlit/Color")) { color = ZhuRed };
+        var headMat = new Material(Shader.Find("Unlit/Color")) { color = new Color(0.82f, 0.62f, 0.44f) };  // 暖肤色
+        var legMat = new Material(Shader.Find("Unlit/Color")) { color = new Color(0.55f, 0.35f, 0.17f) };
+        var armMat = new Material(Shader.Find("Unlit/Color")) { color = new Color(0.65f, 0.45f, 0.25f) };
+
+        // 身体（圆柱）— 朱红色小人
+        var body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        body.name = "Body";
+        body.transform.SetParent(charObj.transform);
+        body.transform.localPosition = new Vector3(0, 0.8f, 0);
+        body.transform.localScale = new Vector3(0.4f, 0.45f, 0.3f);
+        body.GetComponent<Renderer>().material = bodyMat;
+        Object.Destroy(body.GetComponent<Collider>());
+        body.layer = layer;
+
+        // 头（球）— 暖肤色
+        var head = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        head.name = "Head";
+        head.transform.SetParent(charObj.transform);
+        head.transform.localPosition = new Vector3(0, 1.6f, 0);
+        head.transform.localScale = new Vector3(0.35f, 0.35f, 0.35f);
+        head.GetComponent<Renderer>().material = headMat;
+        Object.Destroy(head.GetComponent<Collider>());
+        head.layer = layer;
+
+        // 左腿
+        var leftLeg = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        leftLeg.name = "LeftLeg";
+        leftLeg.transform.SetParent(charObj.transform);
+        leftLeg.transform.localPosition = new Vector3(-0.12f, 0.2f, 0);
+        leftLeg.transform.localScale = new Vector3(0.12f, 0.22f, 0.12f);
+        leftLeg.GetComponent<Renderer>().material = legMat;
+        Object.Destroy(leftLeg.GetComponent<Collider>());
+        leftLeg.layer = layer;
+
+        // 右腿
+        var rightLeg = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        rightLeg.name = "RightLeg";
+        rightLeg.transform.SetParent(charObj.transform);
+        rightLeg.transform.localPosition = new Vector3(0.12f, 0.2f, 0);
+        rightLeg.transform.localScale = new Vector3(0.12f, 0.22f, 0.12f);
+        rightLeg.GetComponent<Renderer>().material = legMat;
+        Object.Destroy(rightLeg.GetComponent<Collider>());
+        rightLeg.layer = layer;
+
+        // 左臂
+        var leftArm = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        leftArm.name = "LeftArm";
+        leftArm.transform.SetParent(charObj.transform);
+        leftArm.transform.localPosition = new Vector3(-0.35f, 0.85f, 0);
+        leftArm.transform.localScale = new Vector3(0.08f, 0.3f, 0.08f);
+        leftArm.GetComponent<Renderer>().material = armMat;
+        Object.Destroy(leftArm.GetComponent<Collider>());
+        leftArm.layer = layer;
+
+        // 右臂
+        var rightArm = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        rightArm.name = "RightArm";
+        rightArm.transform.SetParent(charObj.transform);
+        rightArm.transform.localPosition = new Vector3(0.35f, 0.85f, 0);
+        rightArm.transform.localScale = new Vector3(0.08f, 0.3f, 0.08f);
+        rightArm.GetComponent<Renderer>().material = armMat;
+        Object.Destroy(rightArm.GetComponent<Collider>());
+        rightArm.layer = layer;
+
+        // 附加角色控制器
+        character = charObj.AddComponent<CharacterController2D>();
+    }
+
+    private IEnumerator AutoWalkCoroutine()
+    {
+        yield return new WaitForSeconds(2f); // 初始等待
+        while (charStageRoot != null && character != null)
+        {
+            if (character.GetCurrentState() == CharacterState.Idle)
+            {
+                charWalkTimer += Time.deltaTime;
+                if (charWalkTimer >= nextWalkDelay)
+                {
+                    // 随机走动到 [-3, 3] 范围
+                    float targetX = Random.Range(-3f, 3f);
+                    character.WalkTo(new Vector3(targetX, 0, 0));
+                    charWalkTimer = 0f;
+                    nextWalkDelay = Random.Range(2f, 5f);
+                }
+            }
+            else
+            {
+                charWalkTimer = 0f;
+            }
+            yield return null;
+        }
+    }
+
     private void CreateScrollCard(Transform parent, int idx)
     {
         string cat = Categories[idx];
@@ -271,6 +476,8 @@ public class MainPanel : UIFrame
     private void OnCardClicked(string category, Transform cardTransform)
     {
         SfxClick();
+        // 角色互动
+        if (character != null) character.Interact();
         // 点击反馈：放大弹回
         StartCoroutine(CardClickFeedback(cardTransform));
         // 跳转
@@ -442,16 +649,18 @@ public class MainPanel : UIFrame
         var tt = titleObj.AddComponent<Text>();
         tt.font = Font(); tt.text = "系统设置"; tt.fontSize = 24; tt.color = ZhuRed; tt.alignment = TextAnchor.MiddleCenter;
 
-        // 关闭按钮
+        // 关闭按钮 — 右上角标题行内
         var xObj = NewUI("X", panel.transform);
         var xr = xObj.GetComponent<RectTransform>();
-        xr.anchorMin = xr.anchorMax = new Vector2(1, 1); xr.pivot = new Vector2(1, 1);
-        xr.sizeDelta = new Vector2(36, 36); xr.anchoredPosition = new Vector2(-8, -8);
+        xr.anchorMin = xr.anchorMax = new Vector2(1, 1);
+        xr.pivot = new Vector2(1, 1);
+        xr.sizeDelta = new Vector2(44, 44);
+        xr.anchoredPosition = new Vector2(-6, -28);
         xObj.AddComponent<Image>().color = ZhuRed;
         xObj.AddComponent<Button>().onClick.AddListener(() => overlay.SetActive(false));
         var xTxt = NewUI("XT", xObj.transform); Stretch(xTxt);
         var xt = xTxt.AddComponent<Text>();
-        xt.font = Font(); xt.text = "X"; xt.fontSize = 20; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
+        xt.font = Font(); xt.text = "✕"; xt.fontSize = 26; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
 
         // ── 内容区（可滚动） ──
         var content = NewUI("Content", panel.transform);
@@ -787,6 +996,12 @@ public class MainPanel : UIFrame
     }
 
     private void TogglePanel(GameObject p) { if (p != null) p.SetActive(!p.activeSelf); }
+
+    private void OnDestroy()
+    {
+        if (charRT != null) { charRT.Release(); charRT = null; }
+        if (charStageRoot != null) Destroy(charStageRoot);
+    }
 
     private void CreateBackpackPanel()
     {
