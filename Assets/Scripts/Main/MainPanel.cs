@@ -1118,7 +1118,7 @@ public class MainPanel : UIFrame
         backpackPanel.SetActive(true);
 
         var panel = backpackPanel.transform.Find("Panel");
-        var contentArea = panel.Find("C");
+        var contentArea = panel.Find("Viewport/C");
         if (contentArea == null) return;
 
         Object.Destroy(contentArea.GetComponent<Text>());
