@@ -467,9 +467,10 @@ public class ExhibitManager : UIFrame
         dlr.pivot = new Vector2(0.5f, 1f); dlr.sizeDelta = new Vector2(0, 2);
         var dlImg = divLine.AddComponent<Image>(); dlImg.color = OchreBrown; dlImg.raycastTarget = false;
 
-        AddBtnAnchored("PrevBtn", footer.transform, new Vector2(0.2f, 0.5f), new Vector2(130, 40), Vector2.zero, "< 上一个", OchreBrown, 15).onClick.AddListener(ShowPrevious);
-        AddBtnAnchored("CollectBtn2", footer.transform, new Vector2(0.5f, 0.5f), new Vector2(130, 40), Vector2.zero, "收藏", OchreBrown, 15).onClick.AddListener(OnCollectClicked);
-        AddBtnAnchored("NextBtn", footer.transform, new Vector2(0.8f, 0.5f), new Vector2(130, 40), Vector2.zero, "下一个 >", OchreBrown, 15).onClick.AddListener(ShowNext);
+        AddBtnAnchored("PrevBtn", footer.transform, new Vector2(0.16f, 0.5f), new Vector2(110, 40), Vector2.zero, "< 上一个", OchreBrown, 14).onClick.AddListener(ShowPrevious);
+        AddBtnAnchored("ShareBtn", footer.transform, new Vector2(0.38f, 0.5f), new Vector2(100, 40), Vector2.zero, "分享", new Color(0.18f, 0.48f, 0.43f), 14).onClick.AddListener(OnShareClicked);
+        AddBtnAnchored("CollectBtn2", footer.transform, new Vector2(0.62f, 0.5f), new Vector2(100, 40), Vector2.zero, "收藏", OchreBrown, 14).onClick.AddListener(OnCollectClicked);
+        AddBtnAnchored("NextBtn", footer.transform, new Vector2(0.84f, 0.5f), new Vector2(110, 40), Vector2.zero, "下一个 >", OchreBrown, 14).onClick.AddListener(ShowNext);
     }
 
     // ──────────────────── 3D 模型 ────────────────────
@@ -612,6 +613,17 @@ public class ExhibitManager : UIFrame
     {
         collectBtnText.text = isCollected ? "❤ 已收藏" : "♡ 收藏";
         collectBtn.GetComponent<Image>().color = isCollected ? ChinaRed : OchreBrown;
+    }
+
+    // ──────────────────── 分享 ────────────────────
+
+    private void OnShareClicked()
+    {
+        if (currentExhibit == null) return;
+        SfxClick();
+        string shareText = $"【了不起的非遗】{currentExhibit.category} · {currentExhibit.name}\n\n{currentExhibit.description}\n\n{currentExhibit.history}\n\n—— 来自「了不起的非遗」交互展示系统";
+        GUIUtility.systemCopyBuffer = shareText;
+        ShowToast("分享内容已复制到剪贴板", JadeGreen);
     }
 
     private System.Collections.IEnumerator HeartbeatAnimation(Transform target)

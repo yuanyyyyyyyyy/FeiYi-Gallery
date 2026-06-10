@@ -40,9 +40,23 @@ public class EventManager : UIFrame
     // 事件详情UI
     private Text detailTitleText;
     private Text detailEraText;
-    private Text detailStoryText;
     private Text detailIndexText;
     private GameObject detailIconObj;
+
+    // 轮播相关
+    private GameObject carouselObj;
+    private Text[] carouselTexts = new Text[3];
+    private GameObject[] carouselCards = new GameObject[3];
+    private GameObject[] carouselDots = new GameObject[3];
+    private int carouselIndex;
+    private float carouselTimer;
+    private const float CarouselInterval = 3.5f;
+    private static readonly string[] CarouselLabels = { "事件背景", "发展经过", "历史成果" };
+    private static readonly Color[] CarouselCardColors = {
+        new Color(0.96f, 0.93f, 0.86f),  // 暖白
+        new Color(0.93f, 0.90f, 0.84f),  // 米黄
+        new Color(0.90f, 0.94f, 0.90f),  // 淡绿
+    };
 
     private void Start()
     {
@@ -346,16 +360,71 @@ public class EventManager : UIFrame
         // 分隔线
         AddDivider("DDiv", cardContainer.transform, new Vector2(0, 20), 350, "◆", GoldColor, GoldColor, 12);
 
-        // 叙事正文
-        var storyObj = NewUI("DStory", cardContainer.transform);
-        var dsr = storyObj.GetComponent<RectTransform>();
-        dsr.anchorMin = new Vector2(0.06f, 0.05f);
-        dsr.anchorMax = new Vector2(0.94f, 0.68f);
-        dsr.offsetMin = dsr.offsetMax = Vector2.zero;
-        detailStoryText = storyObj.AddComponent<Text>();
-        detailStoryText.font = Font(); detailStoryText.fontSize = 16; detailStoryText.color = InkBlack;
-        detailStoryText.alignment = TextAnchor.UpperLeft;
-        detailStoryText.lineSpacing = 1.6f;
+        // ── 轮播区域 ──
+        carouselObj = NewUI("Carousel", cardContainer.transform);
+        var carR = carouselObj.GetComponent<RectTransform>();
+        carR.anchorMin = new Vector2(0.04f, 0.05f);
+        carR.anchorMax = new Vector2(0.96f, 0.68f);
+        carR.offsetMin = carR.offsetMax = Vector2.zero;
+
+        // 3张轮播卡片
+        for (int i = 0; i < 3; i++)
+        {
+            var cCard = NewUI($"CCard_{i}", carouselObj.transform);
+            var ccR = cCard.GetComponent<RectTransform>();
+            Stretch(cCard);
+            var cardImg = cCard.AddComponent<Image>();
+            cardImg.color = CarouselCardColors[i];
+            cardImg.raycastTarget = true;
+            var ccBtn = cCard.AddComponent<Button>();
+            int ci = i;
+            ccBtn.onClick.AddListener(() => { carouselIndex = ci; ShowCarouselCard(); carouselTimer = 0f; });
+
+            // 阶段标签
+            var lbl = NewUI($"Label_{i}", cCard.transform);
+            var lr = lbl.GetComponent<RectTransform>();
+            lr.anchorMin = new Vector2(0, 1); lr.anchorMax = new Vector2(1, 1);
+            lr.pivot = new Vector2(0.5f, 1f); lr.sizeDelta = new Vector2(0, 28);
+            var lTxt = lbl.AddComponent<Text>();
+            lTxt.font = Font(); lTxt.text = $"【{CarouselLabels[i]}】"; lTxt.fontSize = 15;
+            lTxt.color = ZhuRed; lTxt.alignment = TextAnchor.MiddleCenter;
+
+            // 正文
+            var txtObj = NewUI($"CText_{i}", cCard.transform);
+            var ctR = txtObj.GetComponent<RectTransform>();
+            ctR.anchorMin = new Vector2(0.06f, 0.1f); ctR.anchorMax = new Vector2(0.94f, 0.88f);
+            ctR.offsetMin = ctR.offsetMax = Vector2.zero;
+            carouselTexts[i] = txtObj.AddComponent<Text>();
+            carouselTexts[i].font = Font(); carouselTexts[i].fontSize = 15; carouselTexts[i].color = InkBlack;
+            carouselTexts[i].alignment = TextAnchor.UpperLeft;
+            carouselTexts[i].lineSpacing = 1.5f;
+
+            carouselCards[i] = cCard;
+        }
+
+        // 指示点
+        var dotsRow = NewUI("DotsRow", carouselObj.transform);
+        var drR = dotsRow.GetComponent<RectTransform>();
+        drR.anchorMin = drR.anchorMax = new Vector2(0.5f, 0);
+        drR.pivot = new Vector2(0.5f, 0);
+        drR.sizeDelta = new Vector2(100, 16);
+        drR.anchoredPosition = Vector2.zero;
+
+        for (int i = 0; i < 3; i++)
+        {
+            var dot = NewUI($"Dot_{i}", dotsRow.transform);
+            var dotR = dot.GetComponent<RectTransform>();
+            dotR.anchorMin = dotR.anchorMax = new Vector2(0.2f + i * 0.3f, 0.5f);
+            dotR.pivot = new Vector2(0.5f, 0.5f);
+            dotR.sizeDelta = new Vector2(10, 10);
+            var dotImg = dot.AddComponent<Image>();
+            dotImg.color = (i == 0) ? ZhuRed : new Color(0.7f, 0.7f, 0.7f);
+            dotImg.raycastTarget = true;
+            var dotBtn = dot.AddComponent<Button>();
+            int di = i;
+            dotBtn.onClick.AddListener(() => { carouselIndex = di; ShowCarouselCard(); carouselTimer = 0f; });
+            carouselDots[i] = dot;
+        }
 
         // 翻页索引
         detailIndexText = AddLabelCenter("DIndex", cardContainer.transform, new Vector2(0, -20), new Vector2(200, 25), "", 14, new Color(0.5f, 0.5f, 0.5f));
@@ -448,12 +517,61 @@ public class EventManager : UIFrame
 
         detailTitleText.text = item.title;
         detailEraText.text = item.era;
-        detailStoryText.text = item.storyText;
         detailIndexText.text = $"{eventIndex + 1} / {currentEvents.Count}";
+
+        // 将故事文本分成3段填充轮播卡片
+        string full = item.storyText;
+        int len = full.Length;
+        int seg = Mathf.Max(1, len / 3);
+        string[] parts = {
+            len > 0 ? full.Substring(0, Mathf.Min(seg, len)) : "暂无背景信息",
+            len > seg ? full.Substring(seg, Mathf.Min(seg, len - seg)) : "暂无经过信息",
+            len > seg * 2 ? full.Substring(seg * 2) : "暂无成果信息"
+        };
+        if (len <= 0) { parts[0] = "暂无背景信息"; parts[1] = "暂无经过信息"; parts[2] = "暂无成果信息"; }
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (carouselTexts[i] != null) carouselTexts[i].text = parts[i];
+        }
+
+        carouselIndex = 0;
+        ShowCarouselCard();
+        carouselTimer = 0f;
 
         // 更新印章文字
         var iconText = detailIconObj.transform.Find("T");
         if (iconText != null) iconText.GetComponent<Text>().text = item.title.Length > 0 ? item.title[0].ToString() : "史";
+    }
+
+    private void ShowCarouselCard()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            if (carouselCards[i] != null)
+            {
+                carouselCards[i].SetActive(i == carouselIndex);
+            }
+            if (carouselDots[i] != null)
+            {
+                carouselDots[i].GetComponent<Image>().color = (i == carouselIndex) ? ZhuRed : new Color(0.7f, 0.7f, 0.7f);
+            }
+        }
+    }
+
+    private void Update()
+    {
+        // 自动轮播
+        if (currentState == ViewState.EventDetail && carouselCards[0] != null)
+        {
+            carouselTimer += Time.deltaTime;
+            if (carouselTimer >= CarouselInterval)
+            {
+                carouselTimer = 0f;
+                carouselIndex = (carouselIndex + 1) % 3;
+                ShowCarouselCard();
+            }
+        }
     }
 
     private void ShowPrevEvent()

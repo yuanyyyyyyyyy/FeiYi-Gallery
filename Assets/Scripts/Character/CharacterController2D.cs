@@ -14,6 +14,7 @@ public class CharacterController2D : MonoBehaviour
     [Header("动画设置")]
     public float walkLegSwingSpeed = 8f;
     public float walkLegSwingAmount = 30f;
+    public float walkArmSwingAmount = 25f;
     public float interactSpinSpeed = 720f;
 
     // 状态机
@@ -25,6 +26,8 @@ public class CharacterController2D : MonoBehaviour
     private Transform headTransform;
     private Transform leftLegTransform;
     private Transform rightLegTransform;
+    private Transform leftArmTransform;
+    private Transform rightArmTransform;
 
     // 移动目标
     private Vector3 targetPosition;
@@ -38,8 +41,17 @@ public class CharacterController2D : MonoBehaviour
     private void CacheParts()
     {
         // 查找角色部件（由 MainPanel.Create3DCharacter 创建的几何体小人结构）
-        // 身体=第一个子对象(Cylinder), 头=第二个(Sphere), 左腿=第三个(Cylinder), 右腿=第四个(Cylinder)
-        if (transform.childCount >= 4)
+        // 0=Body, 1=Head, 2=LeftLeg, 3=RightLeg, 4=LeftArm, 5=RightArm
+        if (transform.childCount >= 6)
+        {
+            bodyTransform = transform.GetChild(0);
+            headTransform = transform.GetChild(1);
+            leftLegTransform = transform.GetChild(2);
+            rightLegTransform = transform.GetChild(3);
+            leftArmTransform = transform.GetChild(4);
+            rightArmTransform = transform.GetChild(5);
+        }
+        else if (transform.childCount >= 4)
         {
             bodyTransform = transform.GetChild(0);
             headTransform = transform.GetChild(1);
@@ -82,6 +94,12 @@ public class CharacterController2D : MonoBehaviour
             headTransform.localPosition = new Vector3(0, 1.55f + bob, 0);
         }
 
+        // 手臂自然微摆
+        if (leftArmTransform != null)
+            leftArmTransform.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(Time.time * 1.5f) * 3f);
+        if (rightArmTransform != null)
+            rightArmTransform.localRotation = Quaternion.Euler(0, 0, -Mathf.Sin(Time.time * 1.5f) * 3f);
+
         // 腿复位
         ResetLegs();
     }
@@ -103,12 +121,18 @@ public class CharacterController2D : MonoBehaviour
             if (dir > 0 && !facingRight) Flip();
             if (dir < 0 && facingRight) Flip();
 
-            // 行走动画：腿部摆动
+            // 行走动画：腿部前后摆动
             float swing = Mathf.Sin(Time.time * walkLegSwingSpeed) * walkLegSwingAmount;
             if (leftLegTransform != null)
                 leftLegTransform.localRotation = Quaternion.Euler(swing, 0, 0);
             if (rightLegTransform != null)
                 rightLegTransform.localRotation = Quaternion.Euler(-swing, 0, 0);
+
+            // 行走动画：手臂前后摆动（与腿反向）
+            if (leftArmTransform != null)
+                leftArmTransform.localRotation = Quaternion.Euler(-swing * walkArmSwingAmount / walkLegSwingAmount, 0, 0);
+            if (rightArmTransform != null)
+                rightArmTransform.localRotation = Quaternion.Euler(swing * walkArmSwingAmount / walkLegSwingAmount, 0, 0);
 
             // 身体轻微晃动
             if (bodyTransform != null)
@@ -123,29 +147,25 @@ public class CharacterController2D : MonoBehaviour
 
     private void UpdateInteracting()
     {
-        // 交互动画：身体旋转
-        if (bodyTransform != null)
-        {
-            bodyTransform.Rotate(Vector3.up, interactSpinSpeed * Time.deltaTime);
-        }
-        if (headTransform != null)
-        {
-            headTransform.Rotate(Vector3.up, interactSpinSpeed * Time.deltaTime);
-        }
-
-        // 手臂摆动效果（用腿代替）
+        // 交互动画：手臂挥舞
         float wave = Mathf.Sin(Time.time * 10f) * 45f;
-        if (leftLegTransform != null)
-            leftLegTransform.localRotation = Quaternion.Euler(0, 0, wave);
-        if (rightLegTransform != null)
-            rightLegTransform.localRotation = Quaternion.Euler(0, 0, -wave);
+        if (leftArmTransform != null)
+            leftArmTransform.localRotation = Quaternion.Euler(wave, 0, -30f);
+        if (rightArmTransform != null)
+            rightArmTransform.localRotation = Quaternion.Euler(-wave, 0, 30f);
 
-        // 1秒后回到 Idle
-        if (stateTimer > 1f)
+        // 身体轻微旋转
+        if (bodyTransform != null)
+            bodyTransform.localRotation = Quaternion.Euler(0, Mathf.Sin(Time.time * 6f) * 10f, 0);
+
+        // 头部轻微摆动
+        if (headTransform != null)
+            headTransform.localRotation = Quaternion.Euler(0, Mathf.Sin(Time.time * 8f) * 8f, 0);
+
+        // 1.2秒后回到 Idle
+        if (stateTimer > 1.2f)
         {
-            if (bodyTransform != null) bodyTransform.localRotation = Quaternion.identity;
-            if (headTransform != null) headTransform.localRotation = Quaternion.identity;
-            ResetLegs();
+            ResetParts();
             ChangeState(CharacterState.Idle);
         }
     }
@@ -202,6 +222,14 @@ public class CharacterController2D : MonoBehaviour
         if (leftLegTransform != null) leftLegTransform.localRotation = Quaternion.identity;
         if (rightLegTransform != null) rightLegTransform.localRotation = Quaternion.identity;
         if (bodyTransform != null) bodyTransform.localRotation = Quaternion.identity;
+    }
+
+    private void ResetParts()
+    {
+        ResetLegs();
+        if (leftArmTransform != null) leftArmTransform.localRotation = Quaternion.identity;
+        if (rightArmTransform != null) rightArmTransform.localRotation = Quaternion.identity;
+        if (headTransform != null) headTransform.localRotation = Quaternion.identity;
     }
 
     #endregion

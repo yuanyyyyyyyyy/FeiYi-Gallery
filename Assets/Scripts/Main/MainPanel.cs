@@ -19,6 +19,8 @@ public class MainPanel : UIFrame
     private GameObject backpackPanel, settingsPanel, helpPanel;
     private Transform canvasTRef;
     private CharacterController2D character;
+    private InputField backpackSearchInput;
+    private int backpackCategoryFilter = -1; // -1=全部
 
     private void Start()
     {
@@ -1121,24 +1123,162 @@ public class MainPanel : UIFrame
 
         Object.Destroy(contentArea.GetComponent<Text>());
 
-        if (items.Count == 0)
+        // ── 搜索框 ──
+        var searchRow = NewUI("SearchRow", contentArea);
+        var srR = searchRow.GetComponent<RectTransform>();
+        srR.anchorMin = new Vector2(0, 1); srR.anchorMax = new Vector2(1, 1);
+        srR.pivot = new Vector2(0, 1f);
+        srR.sizeDelta = new Vector2(0, 36);
+        srR.anchoredPosition = Vector2.zero;
+
+        var searchBg = searchRow.AddComponent<Image>();
+        searchBg.color = new Color(XuanPaper.r, XuanPaper.g, XuanPaper.b, 0.8f);
+        searchBg.raycastTarget = true;
+
+        var searchInputObj = NewUI("SearchInput", searchRow.transform);
+        var siR = searchInputObj.GetComponent<RectTransform>();
+        siR.anchorMin = Vector2.zero; siR.anchorMax = Vector2.one;
+        siR.offsetMin = new Vector2(8, 4); siR.offsetMax = new Vector2(-8, -4);
+
+        var searchTxt = NewUI("Text", searchInputObj.transform);
+        var stR = searchTxt.GetComponent<RectTransform>();
+        stR.anchorMin = Vector2.zero; stR.anchorMax = Vector2.one;
+        stR.offsetMin = new Vector2(8, 2); stR.offsetMax = new Vector2(-4, -2);
+        var sTxt = searchTxt.AddComponent<Text>();
+        sTxt.font = Font(); sTxt.fontSize = 16; sTxt.color = InkBlack; sTxt.alignment = TextAnchor.MiddleLeft;
+
+        var searchPh = NewUI("Placeholder", searchInputObj.transform);
+        var spR = searchPh.GetComponent<RectTransform>();
+        spR.anchorMin = Vector2.zero; spR.anchorMax = Vector2.one;
+        spR.offsetMin = new Vector2(8, 2); spR.offsetMax = new Vector2(-4, -2);
+        var sPh = searchPh.AddComponent<Text>();
+        sPh.font = Font(); sPh.text = "🔍 搜索展品..."; sPh.fontSize = 14;
+        sPh.color = new Color(0.5f, 0.5f, 0.5f, 0.6f); sPh.alignment = TextAnchor.MiddleLeft;
+
+        backpackSearchInput = searchInputObj.AddComponent<InputField>();
+        backpackSearchInput.textComponent = sTxt;
+        backpackSearchInput.placeholder = sPh;
+        backpackSearchInput.onValueChanged.AddListener(_ => RefreshBackpackList());
+
+        // ── 品类筛选按钮行 ──
+        var filterRow = NewUI("FilterRow", contentArea);
+        var frR = filterRow.GetComponent<RectTransform>();
+        frR.anchorMin = new Vector2(0, 1); frR.anchorMax = new Vector2(1, 1);
+        frR.pivot = new Vector2(0, 1f);
+        frR.sizeDelta = new Vector2(0, 30);
+        frR.anchoredPosition = new Vector2(0, -38);
+
+        var flHlg = filterRow.AddComponent<HorizontalLayoutGroup>();
+        flHlg.childAlignment = TextAnchor.MiddleCenter;
+        flHlg.spacing = 4;
+        flHlg.padding = new RectOffset(4, 4, 2, 2);
+        flHlg.childForceExpandWidth = true;
+        flHlg.childForceExpandHeight = false;
+
+        string[] filterNames = { "全部", "瓷器", "剪纸", "书法", "乐器" };
+        for (int i = 0; i < filterNames.Length; i++)
         {
-            var empty = NewUI("Empty", contentArea);
+            var fBtn = NewUI($"Filter_{i}", filterRow.transform);
+            var le = fBtn.AddComponent<LayoutElement>();
+            le.preferredHeight = 26;
+            var fImg = fBtn.AddComponent<Image>();
+            fImg.color = (i == 0) ? ZhuRed : new Color(0.85f, 0.82f, 0.75f);
+            var fb = fBtn.AddComponent<Button>();
+            int idx = i - 1; // -1=全部
+            fb.onClick.AddListener(() => { backpackCategoryFilter = idx; RefreshBackpackList(); });
+            var fTxtObj = NewUI("T", fBtn.transform); Stretch(fTxtObj);
+            var ft = fTxtObj.AddComponent<Text>();
+            ft.font = Font(); ft.text = filterNames[i]; ft.fontSize = 13;
+            ft.color = (i == 0) ? Color.white : InkBlack; ft.alignment = TextAnchor.MiddleCenter;
+        }
+
+        // ── 列表容器 ──
+        var listArea = NewUI("ListArea", contentArea);
+        var laR = listArea.GetComponent<RectTransform>();
+        laR.anchorMin = Vector2.zero; laR.anchorMax = new Vector2(1, 1);
+        laR.offsetMin = Vector2.zero; laR.offsetMax = new Vector2(0, -68);
+
+        // 初始渲染列表
+        backpackCategoryFilter = -1;
+        if (backpackSearchInput != null) backpackSearchInput.text = "";
+        RefreshBackpackList();
+    }
+
+    private void RefreshBackpackList()
+    {
+        if (backpackPanel == null) return;
+        var contentArea = backpackPanel.transform.Find("Panel/C");
+        if (contentArea == null) return;
+        var listArea = contentArea.Find("ListArea");
+        if (listArea == null) return;
+
+        // 清空旧列表
+        for (int c = listArea.childCount - 1; c >= 0; c--)
+            Destroy(listArea.GetChild(c).gameObject);
+
+        var allItems = BackpackManager.Instance.GetBackpackItems(GameManager.Instance.currentUser);
+        string search = backpackSearchInput != null ? backpackSearchInput.text.Trim() : "";
+
+        // 过滤
+        var filtered = new List<string>();
+        foreach (var id in allItems)
+        {
+            var data = GameManager.Instance.GetExhibit(id);
+            if (data == null) continue;
+
+            // 品类筛选
+            if (backpackCategoryFilter >= 0)
+            {
+                string targetCat = Categories[backpackCategoryFilter];
+                if (data.category != targetCat) continue;
+            }
+
+            // 搜索筛选
+            if (!string.IsNullOrEmpty(search))
+            {
+                if (data.name.IndexOf(search, System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                    data.category.IndexOf(search, System.StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+            }
+
+            filtered.Add(id);
+        }
+
+        // 更新筛选按钮样式
+        var filterRow = contentArea.Find("FilterRow");
+        if (filterRow != null)
+        {
+            for (int i = 0; i < filterRow.childCount; i++)
+            {
+                var fBtn = filterRow.GetChild(i);
+                var img = fBtn.GetComponent<Image>();
+                var txt = fBtn.Find("T")?.GetComponent<Text>();
+                bool selected = (i - 1) == backpackCategoryFilter;
+                if (img != null) img.color = selected ? ZhuRed : new Color(0.85f, 0.82f, 0.75f);
+                if (txt != null) txt.color = selected ? Color.white : InkBlack;
+            }
+        }
+
+        if (filtered.Count == 0)
+        {
+            var empty = NewUI("Empty", listArea);
             Stretch(empty);
             var et = empty.AddComponent<Text>();
-            et.font = Font(); et.text = "暂无收藏展品\n浏览展品时点击「收藏」即可添加到背包";
+            et.font = Font(); et.text = string.IsNullOrEmpty(search) && backpackCategoryFilter < 0
+                ? "暂无收藏展品\n浏览展品时点击「收藏」即可添加到背包"
+                : "没有匹配的展品";
             et.fontSize = 16; et.color = new Color(0.5f, 0.5f, 0.5f); et.alignment = TextAnchor.MiddleCenter;
             return;
         }
 
         float rowH = 0.12f;
-        for (int i = 0; i < items.Count; i++)
+        for (int i = 0; i < filtered.Count; i++)
         {
-            string id = items[i];
+            string id = filtered[i];
             var data = GameManager.Instance.GetExhibit(id);
-            string label = data != null ? data.name : id;
+            string label = data != null ? $"{data.category} · {data.name}" : id;
 
-            var row = NewUI($"Item_{i}", contentArea);
+            var row = NewUI($"Item_{i}", listArea);
             var rr = row.GetComponent<RectTransform>();
             rr.anchorMin = new Vector2(0, 1f - (i + 1) * rowH);
             rr.anchorMax = new Vector2(1f, 1f - i * rowH);
@@ -1169,7 +1309,6 @@ public class MainPanel : UIFrame
     private void OnDeleteFromBackpack(string exhibitId)
     {
         BackpackManager.Instance.RemoveFromBackpack(GameManager.Instance.currentUser, exhibitId);
-        CreateBackpackPanel();
-        backpackPanel.SetActive(true);
+        RefreshBackpackList();
     }
 }
