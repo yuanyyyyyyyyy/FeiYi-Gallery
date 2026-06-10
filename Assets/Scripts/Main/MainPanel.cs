@@ -538,7 +538,7 @@ public class MainPanel : UIFrame
         string[] navNames = { "背包", "设置", "帮助", "退出" };
         Color[] navAccents = { JadeGreen, GoldColor, ZhuRed, new Color(0.5f, 0.5f, 0.5f) };
         System.Action[] navActions = {
-            () => { SfxClick(); if (backpackPanel == null) { CreateBackpackPanel(); return; } backpackPanel.SetActive(!backpackPanel.activeSelf); },
+            () => { SfxClick(); if (backpackPanel == null) { CreateBackpackPanel(); return; } if (!backpackPanel.activeSelf) { backpackPanel.SetActive(true); RefreshBackpackList(); } else backpackPanel.SetActive(false); },
             () => { SfxClick(); TogglePanel(settingsPanel); },
             () => { SfxClick(); TogglePanel(helpPanel); },
             () => { SfxClick(); GameManager.Instance.Logout(); SceneLoader.Instance.LoadScene(SceneNames.Login); }
@@ -1122,6 +1122,15 @@ public class MainPanel : UIFrame
         if (contentArea == null) return;
 
         Object.Destroy(contentArea.GetComponent<Text>());
+        Object.Destroy(contentArea.GetComponent<ContentSizeFitter>());
+
+        // 重置 C 的 RectTransform：撑满 Viewport（否则高度为0，内容不可见）
+        var cRect = contentArea.GetComponent<RectTransform>();
+        cRect.anchorMin = Vector2.zero;
+        cRect.anchorMax = Vector2.one;
+        cRect.pivot = new Vector2(0.5f, 0.5f);
+        cRect.sizeDelta = Vector2.zero;
+        cRect.anchoredPosition = Vector2.zero;
 
         // ── 搜索框 ──
         var searchRow = NewUI("SearchRow", contentArea);
@@ -1207,7 +1216,7 @@ public class MainPanel : UIFrame
     private void RefreshBackpackList()
     {
         if (backpackPanel == null) return;
-        var contentArea = backpackPanel.transform.Find("Panel/C");
+        var contentArea = backpackPanel.transform.Find("Panel/Viewport/C");
         if (contentArea == null) return;
         var listArea = contentArea.Find("ListArea");
         if (listArea == null) return;

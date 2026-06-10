@@ -336,7 +336,7 @@ public abstract class UIFrame : MonoBehaviour
         Stretch(overlay);
         var olImg = overlay.AddComponent<Image>();
         olImg.color = new Color(0, 0, 0, 0.85f);
-        olImg.raycastTarget = false; // 遮罩不拦截点击，只有 X 按钮关闭
+        olImg.raycastTarget = true; // 遮罩拦截点击，防止穿透；只有 X 按钮关闭
         overlay.SetActive(false);
 
         var panel = NewUI("Panel", overlay.transform);
@@ -408,9 +408,6 @@ public abstract class UIFrame : MonoBehaviour
         Stretch(xTxt);
         var xt = xTxt.AddComponent<Text>();
         xt.font = Font(); xt.text = "X"; xt.fontSize = 20; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
-
-        // 点击遮罩关闭
-        overlay.AddComponent<Button>().onClick.AddListener(() => overlay.SetActive(false));
 
         return overlay;
     }
