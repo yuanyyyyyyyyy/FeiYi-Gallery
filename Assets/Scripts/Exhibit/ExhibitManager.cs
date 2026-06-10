@@ -51,6 +51,12 @@ public class ExhibitManager : UIFrame
     private int activeTab;
     private bool drawerOpen;
     private bool drawerAnimating;
+
+    // 展品缩略图
+    private RenderTexture thumbRT;
+    private Camera thumbCam;
+    private GameObject thumbCamObj;
+    private RawImage thumbRawImg;
     private const float DrawerAnimDuration = 0.3f;
     private const float FooterHeight = 55f;
 
@@ -294,12 +300,41 @@ public class ExhibitManager : UIFrame
         rbr.sizeDelta = new Vector2(0, 3);
         var rbImg = redBar.AddComponent<Image>(); rbImg.color = ChinaRed; rbImg.raycastTarget = false;
 
+        // 展品缩略图区域
+        var thumbArea = NewUI("ThumbArea", drawerContent.transform);
+        var tar = thumbArea.GetComponent<RectTransform>();
+        tar.anchorMin = tar.anchorMax = new Vector2(0.5f, 1f);
+        tar.pivot = new Vector2(0.5f, 1f);
+        tar.sizeDelta = new Vector2(180, 100);
+        tar.anchoredPosition = new Vector2(0, -10);
+
+        thumbRT = new RenderTexture(180, 100, 16, RenderTextureFormat.ARGB32);
+        thumbRT.name = "ExhibitThumb";
+        thumbRawImg = thumbArea.AddComponent<RawImage>();
+        thumbRawImg.texture = thumbRT;
+        thumbRawImg.raycastTarget = false;
+        thumbRawImg.color = new Color(1, 1, 1, 0.9f);
+
+        // 缩略图相机
+        thumbCamObj = new GameObject("ThumbCam");
+        thumbCamObj.transform.position = new Vector3(0, 1f, 2f);
+        thumbCamObj.transform.rotation = Quaternion.Euler(15, 180, 0);
+        thumbCam = thumbCamObj.AddComponent<Camera>();
+        thumbCam.orthographic = true;
+        thumbCam.orthographicSize = 1.2f;
+        thumbCam.clearFlags = CameraClearFlags.SolidColor;
+        thumbCam.backgroundColor = new Color(0.96f, 0.94f, 0.90f, 0f);
+        thumbCam.targetTexture = thumbRT;
+        thumbCam.cullingMask = 1 << 0; // Default layer (3D models)
+        thumbCamObj.SetActive(false);
+
         // 正文文字
         var txtObj = NewUI("Text", drawerContent.transform);
         var txtr = txtObj.GetComponent<RectTransform>();
         txtr.anchorMin = new Vector2(0.06f, 0.06f);
         txtr.anchorMax = new Vector2(0.94f, 0.94f);
         txtr.offsetMin = txtr.offsetMax = Vector2.zero;
+        txtr.offsetMax = new Vector2(0, -110);
         drawerContentText = txtObj.AddComponent<Text>();
         drawerContentText.font = Font();
         drawerContentText.fontSize = 17;
@@ -346,6 +381,7 @@ public class ExhibitManager : UIFrame
         {
             drawerContent.SetActive(true);
             UpdateDrawerContent();
+            RenderThumbnail();
         }
 
         // 抽屉展开时隐藏引用语，收起时恢复
@@ -392,7 +428,7 @@ public class ExhibitManager : UIFrame
         drawerContent.SetActive(open);
         if (quoteObj != null) quoteObj.SetActive(!open);
         handleText.text = open ? "▼  收起  ▼" : "▲  详情  ▲";
-        if (open) UpdateDrawerContent();
+        if (open) { UpdateDrawerContent(); RenderThumbnail(); }
     }
 
     private void UpdateTabStyles()
@@ -597,5 +633,21 @@ public class ExhibitManager : UIFrame
             yield return null;
         }
         target.localScale = orig;
+    }
+
+    // ──────────────────── 缩略图渲染 ────────────────────
+
+    private void RenderThumbnail()
+    {
+        if (thumbCam == null || currentModel == null) return;
+        thumbCamObj.SetActive(true);
+        thumbCam.Render();
+        thumbCamObj.SetActive(false);
+    }
+
+    private void OnDestroy()
+    {
+        if (thumbRT != null) { thumbRT.Release(); thumbRT = null; }
+        if (thumbCamObj != null) Destroy(thumbCamObj);
     }
 }

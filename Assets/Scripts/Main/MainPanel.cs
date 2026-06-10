@@ -58,8 +58,13 @@ public class MainPanel : UIFrame
 
         // ── 弹窗 ──
         settingsPanel = CreateSettingsPanel(root);
-        helpPanel = MakeOverlay(root, "帮助",
-            "1. 选择品类卡片浏览展品\n2. 拖拽旋转3D模型\n3. 查看展品详细信息\n4. 收藏感兴趣的展品\n5. 在背包中管理收藏\n6. 知识探索学习文化\n7. 历史故事了解传承", ZhuRed);
+
+        // 帮助弹窗 — 从 HelpManager 读取引导步骤和FAQ
+        var guideSteps = HelpManager.GetGuideSteps();
+        var faqItems = HelpManager.GetFAQ();
+        string helpContent = "【使用引导】\n\n" + string.Join("\n\n", guideSteps)
+            + "\n\n━━━━━━━━━━━━━━━━\n\n【常见问题】\n\n" + string.Join("\n\n", faqItems);
+        helpPanel = MakeOverlay(root, "帮助", helpContent, ZhuRed);
     }
 
     // ──────────────────── 顶部标题栏 ────────────────────
@@ -676,6 +681,12 @@ public class MainPanel : UIFrame
 
         y += 20f;
 
+        // ── 主题切换 ──
+        y = AddSettingSectionTitle(content.transform, "主题风格", y);
+        y = AddThemeSelector(content.transform, y);
+
+        y += 20f;
+
         // ── 头像编辑 ──
         y = AddSettingSectionTitle(content.transform, "头像选择", y);
         y = AddAvatarSelector(content.transform, y);
@@ -821,6 +832,99 @@ public class MainPanel : UIFrame
         }
 
         return y - 84f;
+    }
+
+    private static readonly string[] ThemeNames = { "default", "classic", "minimal" };
+    private static readonly string[] ThemeLabels = { "默认", "古典", "简约" };
+    private static readonly Color[] ThemePreviewColors = {
+        new Color(0.96f, 0.90f, 0.78f),  // 宣纸白
+        new Color(0.22f, 0.17f, 0.12f),  // 深褐
+        new Color(0.97f, 0.97f, 0.97f),  // 浅灰
+    };
+
+    private float AddThemeSelector(Transform parent, float y)
+    {
+        var row = NewUI("ThemeRow", parent);
+        var rr = row.GetComponent<RectTransform>();
+        rr.anchorMin = new Vector2(0, 1); rr.anchorMax = new Vector2(1, 1);
+        rr.pivot = new Vector2(0, 1f); rr.sizeDelta = new Vector2(0, 56);
+        rr.anchoredPosition = new Vector2(0, y);
+
+        string current = GameManager.Instance.themeStyle;
+
+        for (int i = 0; i < ThemeNames.Length; i++)
+        {
+            var btn = NewUI($"Theme_{ThemeNames[i]}", row.transform);
+            var br = btn.GetComponent<RectTransform>();
+            float cellW = 1f / ThemeNames.Length;
+            br.anchorMin = new Vector2(i * cellW + 0.03f, 0.08f);
+            br.anchorMax = new Vector2((i + 1) * cellW - 0.03f, 0.92f);
+            br.offsetMin = br.offsetMax = Vector2.zero;
+
+            btn.AddComponent<Image>().color = ThemePreviewColors[i];
+            var button = btn.AddComponent<Button>();
+            int idx = i;
+            button.onClick.AddListener(() => OnThemeSelected(idx));
+
+            var tObj = NewUI("T", btn.transform); Stretch(tObj);
+            var t = tObj.AddComponent<Text>();
+            t.font = Font(); t.text = ThemeLabels[i]; t.fontSize = 16;
+            t.color = i == 1 ? new Color(0.90f, 0.72f, 0.30f) : InkBlack;
+            t.alignment = TextAnchor.MiddleCenter;
+
+            // 选中高亮边框
+            if (ThemeNames[i] == current)
+            {
+                var border = NewUI("Border", btn.transform);
+                Stretch(border);
+                var bImg = border.AddComponent<Image>();
+                bImg.color = ZhuRed; bImg.raycastTarget = false;
+                var bRect = border.GetComponent<RectTransform>();
+                bRect.anchorMin = Vector2.zero; bRect.anchorMax = Vector2.one;
+                bRect.offsetMin = new Vector2(-3, -3); bRect.offsetMax = new Vector2(3, 3);
+                border.transform.SetAsFirstSibling();
+            }
+        }
+
+        return y - 68f;
+    }
+
+    private void OnThemeSelected(int idx)
+    {
+        SfxClick();
+        GameManager.Instance.themeStyle = ThemeNames[idx];
+        GameManager.Instance.SaveSettings();
+
+        // 刷新选中高亮
+        RefreshThemeHighlight(idx);
+
+        ShowToast("主题已切换，返回主页后生效", JadeGreen);
+    }
+
+    private void RefreshThemeHighlight(int selectedIdx)
+    {
+        if (settingsPanel == null) return;
+        var themeRow = settingsPanel.transform.Find("Panel/Content/ThemeRow");
+        if (themeRow == null) return;
+
+        for (int i = 0; i < ThemeNames.Length; i++)
+        {
+            var btn = themeRow.Find($"Theme_{ThemeNames[i]}");
+            if (btn == null) continue;
+            var oldBorder = btn.Find("Border");
+            if (oldBorder != null) Destroy(oldBorder.gameObject);
+            if (i == selectedIdx)
+            {
+                var border = NewUI("Border", btn);
+                Stretch(border);
+                var bImg = border.AddComponent<Image>();
+                bImg.color = ZhuRed; bImg.raycastTarget = false;
+                var bRect = border.GetComponent<RectTransform>();
+                bRect.anchorMin = Vector2.zero; bRect.anchorMax = Vector2.one;
+                bRect.offsetMin = new Vector2(-3, -3); bRect.offsetMax = new Vector2(3, 3);
+                border.transform.SetAsFirstSibling();
+            }
+        }
     }
 
     private void OnAvatarSelected(int idx)

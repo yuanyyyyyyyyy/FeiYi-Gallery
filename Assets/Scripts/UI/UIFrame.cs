@@ -9,13 +9,44 @@ using System.Collections;
 /// </summary>
 public abstract class UIFrame : MonoBehaviour
 {
-    // ──────────────────── 新中式色彩系统 ────────────────────
-    protected static readonly Color ZhuRed    = new Color(0.76f, 0.21f, 0.19f);  // 主色 #C13A28
-    protected static readonly Color GoldColor = new Color(0.83f, 0.65f, 0.27f);  // 辅色 #D4A84B
-    protected static readonly Color InkBlack  = new Color(0.17f, 0.17f, 0.17f);  // 底色 #2B2B2B
-    protected static readonly Color XuanPaper = new Color(0.96f, 0.90f, 0.78f);  // 内容底 #F5E6C8
-    protected static readonly Color JadeGreen = new Color(0.18f, 0.48f, 0.43f);  // 功能色 #2E7A6E
-    protected static readonly Color DarkBar   = new Color(0.10f, 0.10f, 0.10f, 0.95f);
+    // ──────────────────── 新中式色彩系统（支持主题切换）────────────────────
+
+    private static string _activeTheme;
+
+    private static void EnsureTheme()
+    {
+        var t = GameManager.Instance != null ? GameManager.Instance.themeStyle : "default";
+        if (_activeTheme != t) _activeTheme = t;
+    }
+
+    // 主题色板
+    private static readonly Color T_Default_ZhuRed    = new Color(0.76f, 0.21f, 0.19f);
+    private static readonly Color T_Default_GoldColor = new Color(0.83f, 0.65f, 0.27f);
+    private static readonly Color T_Default_InkBlack  = new Color(0.17f, 0.17f, 0.17f);
+    private static readonly Color T_Default_XuanPaper = new Color(0.96f, 0.90f, 0.78f);
+    private static readonly Color T_Default_JadeGreen= new Color(0.18f, 0.48f, 0.43f);
+    private static readonly Color T_Default_DarkBar   = new Color(0.10f, 0.10f, 0.10f, 0.95f);
+
+    private static readonly Color T_Classic_ZhuRed    = new Color(0.62f, 0.14f, 0.12f);  // 暗朱红
+    private static readonly Color T_Classic_GoldColor = new Color(0.90f, 0.72f, 0.30f);  // 明金
+    private static readonly Color T_Classic_InkBlack  = new Color(0.88f, 0.82f, 0.68f);  // 浅金文字（深底用）
+    private static readonly Color T_Classic_XuanPaper = new Color(0.22f, 0.17f, 0.12f);  // 深褐底
+    private static readonly Color T_Classic_JadeGreen= new Color(0.28f, 0.58f, 0.52f);  // 翡翠亮
+    private static readonly Color T_Classic_DarkBar   = new Color(0.14f, 0.10f, 0.07f, 0.97f);
+
+    private static readonly Color T_Minimal_ZhuRed    = new Color(0.72f, 0.30f, 0.28f);  // 柔红
+    private static readonly Color T_Minimal_GoldColor = new Color(0.50f, 0.50f, 0.50f);  // 中灰
+    private static readonly Color T_Minimal_InkBlack  = new Color(0.25f, 0.25f, 0.28f);  // 深灰
+    private static readonly Color T_Minimal_XuanPaper = new Color(0.97f, 0.97f, 0.97f);  // 浅灰白
+    private static readonly Color T_Minimal_JadeGreen= new Color(0.30f, 0.56f, 0.50f);
+    private static readonly Color T_Minimal_DarkBar   = new Color(0.92f, 0.92f, 0.92f, 0.98f);
+
+    protected static Color ZhuRed    { get { EnsureTheme(); return _activeTheme == "classic" ? T_Classic_ZhuRed    : _activeTheme == "minimal" ? T_Minimal_ZhuRed    : T_Default_ZhuRed; } }
+    protected static Color GoldColor { get { EnsureTheme(); return _activeTheme == "classic" ? T_Classic_GoldColor : _activeTheme == "minimal" ? T_Minimal_GoldColor : T_Default_GoldColor; } }
+    protected static Color InkBlack  { get { EnsureTheme(); return _activeTheme == "classic" ? T_Classic_InkBlack  : _activeTheme == "minimal" ? T_Minimal_InkBlack  : T_Default_InkBlack; } }
+    protected static Color XuanPaper { get { EnsureTheme(); return _activeTheme == "classic" ? T_Classic_XuanPaper : _activeTheme == "minimal" ? T_Minimal_XuanPaper : T_Default_XuanPaper; } }
+    protected static Color JadeGreen { get { EnsureTheme(); return _activeTheme == "classic" ? T_Classic_JadeGreen : _activeTheme == "minimal" ? T_Minimal_JadeGreen : T_Default_JadeGreen; } }
+    protected static Color DarkBar   { get { EnsureTheme(); return _activeTheme == "classic" ? T_Classic_DarkBar   : _activeTheme == "minimal" ? T_Minimal_DarkBar   : T_Default_DarkBar; } }
 
     // ──────────────────── 运行时引用 ────────────────────
     protected Transform canvasT;   // Canvas transform
