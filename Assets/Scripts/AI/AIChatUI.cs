@@ -23,8 +23,14 @@ public class AIChatUI : MonoBehaviour
     private InputField inputField;
     private GameObject sendBtn;
     private GameObject quizBtn;
+    private GameObject newChatBtn;
+    private GameObject historyBtn;
     private Text personaNameText;
     private GameObject thinkingObj;
+
+    // 历史会话面板
+    private GameObject historyPanelObj;
+    private Transform historyListContent;
 
     // 角色引用
     private CharacterController2D character;
@@ -134,6 +140,9 @@ public class AIChatUI : MonoBehaviour
 
         // 底部输入区域
         CreateInputArea();
+
+        // 历史会话面板
+        CreateHistoryPanel();
     }
 
     private void CreateHeader()
@@ -164,10 +173,38 @@ public class AIChatUI : MonoBehaviour
         var nameObj = CreateUIObject("PersonaName", headerBg.transform);
         var nr = nameObj.GetComponent<RectTransform>();
         nr.anchorMin = new Vector2(0, 0); nr.anchorMax = new Vector2(0.7f, 1);
-        nr.offsetMin = new Vector2(55, 0); nr.offsetMax = new Vector2(0, 0);
+        nr.offsetMin = new Vector2(55, 0); nr.offsetMax = new Vector2(-160, 0);
         personaNameText = nameObj.AddComponent<Text>();
         personaNameText.font = Fnt; personaNameText.text = "守艺人"; personaNameText.fontSize = 20;
         personaNameText.color = GoldColor; personaNameText.alignment = TextAnchor.MiddleLeft;
+
+        // 新建会话按钮
+        newChatBtn = CreateUIObject("NewChatBtn", headerBg.transform);
+        var nbr = newChatBtn.GetComponent<RectTransform>();
+        nbr.anchorMin = nbr.anchorMax = new Vector2(1, 0.5f);
+        nbr.pivot = new Vector2(1, 0.5f);
+        nbr.sizeDelta = new Vector2(52, 28);
+        nbr.anchoredPosition = new Vector2(-98, 0);
+        newChatBtn.AddComponent<Image>().color = new Color(0.45f, 0.35f, 0.15f, 0.9f);
+        newChatBtn.AddComponent<Button>().onClick.AddListener(OnNewChatClicked);
+        var nct = CreateUIObject("NCT", newChatBtn.transform);
+        Stretch(nct);
+        var ncTxt = nct.AddComponent<Text>();
+        ncTxt.font = Fnt; ncTxt.text = "新建"; ncTxt.fontSize = 13; ncTxt.color = Color.white; ncTxt.alignment = TextAnchor.MiddleCenter;
+
+        // 历史会话按钮
+        historyBtn = CreateUIObject("HistoryBtn", headerBg.transform);
+        var hbr = historyBtn.GetComponent<RectTransform>();
+        hbr.anchorMin = hbr.anchorMax = new Vector2(1, 0.5f);
+        hbr.pivot = new Vector2(1, 0.5f);
+        hbr.sizeDelta = new Vector2(52, 28);
+        hbr.anchoredPosition = new Vector2(-40, 0);
+        historyBtn.AddComponent<Image>().color = new Color(0.45f, 0.35f, 0.15f, 0.9f);
+        historyBtn.AddComponent<Button>().onClick.AddListener(OnHistoryClicked);
+        var hbt = CreateUIObject("HBT", historyBtn.transform);
+        Stretch(hbt);
+        var hbTxt = hbt.AddComponent<Text>();
+        hbTxt.font = Fnt; hbTxt.text = "历史"; hbTxt.fontSize = 13; hbTxt.color = Color.white; hbTxt.alignment = TextAnchor.MiddleCenter;
 
         // 关闭按钮
         var closeBtn = CreateUIObject("CloseBtn", headerBg.transform);
@@ -475,6 +512,237 @@ public class AIChatUI : MonoBehaviour
 
     #endregion
 
+    #region History Panel
+
+    private void CreateHistoryPanel()
+    {
+        // 半透明遮罩
+        historyPanelObj = CreateUIObject("HistoryPanel", overlayObj.transform);
+        Stretch(historyPanelObj);
+        historyPanelObj.AddComponent<Image>().color = new Color(0, 0, 0, 0.5f);
+        historyPanelObj.AddComponent<CanvasGroup>();
+
+        // 面板（居中，480x420）
+        var panel = CreateUIObject("HistCard", historyPanelObj.transform);
+        var pr = panel.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
+        pr.sizeDelta = new Vector2(480, 420);
+        panel.AddComponent<Image>().color = XuanPaper;
+
+        // 顶部装饰线
+        var topLine = CreateUIObject("HTopLine", panel.transform);
+        var tlr = topLine.GetComponent<RectTransform>();
+        tlr.anchorMin = new Vector2(0, 1); tlr.anchorMax = new Vector2(1, 1);
+        tlr.pivot = new Vector2(0.5f, 1f);
+        tlr.sizeDelta = new Vector2(0, 3);
+        topLine.AddComponent<Image>().color = ZhuRed;
+
+        // 标题
+        var titleObj = CreateUIObject("HTitle", panel.transform);
+        var tr = titleObj.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0, 1); tr.anchorMax = new Vector2(0.8f, 1);
+        tr.pivot = new Vector2(0, 1f);
+        tr.sizeDelta = new Vector2(0, 40);
+        tr.anchoredPosition = new Vector2(15, -8);
+        var titleTxt = titleObj.AddComponent<Text>();
+        titleTxt.font = Fnt; titleTxt.text = "历史会话"; titleTxt.fontSize = 18; titleTxt.color = ZhuRed; titleTxt.alignment = TextAnchor.MiddleLeft;
+
+        // 关闭按钮
+        var closeBtn = CreateUIObject("HClose", panel.transform);
+        var cbr = closeBtn.GetComponent<RectTransform>();
+        cbr.anchorMin = cbr.anchorMax = new Vector2(1, 1);
+        cbr.pivot = new Vector2(1, 1f);
+        cbr.sizeDelta = new Vector2(28, 28);
+        cbr.anchoredPosition = new Vector2(-6, -6);
+        closeBtn.AddComponent<Image>().color = ZhuRed;
+        closeBtn.AddComponent<Button>().onClick.AddListener(HideHistoryPanel);
+        var cTxt = CreateUIObject("CT", closeBtn.transform);
+        Stretch(cTxt);
+        var ct = cTxt.AddComponent<Text>();
+        ct.font = Fnt; ct.text = "X"; ct.fontSize = 14; ct.color = Color.white; ct.alignment = TextAnchor.MiddleCenter;
+
+        // 滚动列表区域
+        var scrollObj = CreateUIObject("HScroll", panel.transform);
+        var slR = scrollObj.GetComponent<RectTransform>();
+        slR.anchorMin = new Vector2(0.05f, 0.05f);
+        slR.anchorMax = new Vector2(0.95f, 0.88f);
+        slR.offsetMin = slR.offsetMax = Vector2.zero;
+        scrollObj.AddComponent<Image>().color = new Color(1, 1, 1, 0.5f);
+        var slMask = scrollObj.AddComponent<Mask>();
+        slMask.showMaskGraphic = false;
+
+        var content = CreateUIObject("HListContent", scrollObj.transform);
+        var cR = content.GetComponent<RectTransform>();
+        cR.anchorMin = new Vector2(0, 1); cR.anchorMax = new Vector2(1, 1);
+        cR.pivot = new Vector2(0.5f, 1f);
+        cR.sizeDelta = new Vector2(0, 0);
+        var vlg = content.AddComponent<VerticalLayoutGroup>();
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        vlg.spacing = 6;
+        vlg.padding = new RectOffset(4, 4, 4, 4);
+        var csf = content.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var sr = scrollObj.AddComponent<ScrollRect>();
+        sr.content = cR;
+        sr.viewport = slR;
+        sr.horizontal = false;
+        sr.vertical = true;
+        sr.movementType = ScrollRect.MovementType.Clamped;
+        sr.inertia = true;
+
+        historyListContent = content.transform;
+
+        // 空提示
+        var emptyObj = CreateUIObject("EmptyHint", panel.transform);
+        var er = emptyObj.GetComponent<RectTransform>();
+        er.anchorMin = Vector2.zero; er.anchorMax = Vector2.one;
+        er.offsetMin = er.offsetMax = Vector2.zero;
+        var eTxt = emptyObj.AddComponent<Text>();
+        eTxt.font = Fnt; eTxt.text = "暂无历史会话"; eTxt.fontSize = 16;
+        eTxt.color = new Color(0.5f, 0.5f, 0.5f, 0.6f); eTxt.alignment = TextAnchor.MiddleCenter;
+        eTxt.raycastTarget = false;
+
+        historyPanelObj.SetActive(false);
+    }
+
+    private void ShowHistoryPanel()
+    {
+        // 停止打字机
+        if (typewriterCoroutine != null)
+        {
+            StopCoroutine(typewriterCoroutine);
+            CompleteTyping();
+        }
+
+        PopulateHistoryList();
+        historyPanelObj.SetActive(true);
+
+        var cg = historyPanelObj.GetComponent<CanvasGroup>();
+        if (cg != null)
+        {
+            cg.alpha = 0f;
+            StartCoroutine(FadeInAnim(cg, 0.2f));
+        }
+    }
+
+    private void HideHistoryPanel()
+    {
+        historyPanelObj.SetActive(false);
+    }
+
+    private void PopulateHistoryList()
+    {
+        // 清空旧列表
+        var toDestroy = new System.Collections.Generic.List<GameObject>();
+        foreach (Transform child in historyListContent)
+            toDestroy.Add(child.gameObject);
+        foreach (var go in toDestroy)
+            Destroy(go);
+
+        var sessions = AIChatManager.Instance.GetSavedSessions();
+        var emptyHint = historyPanelObj.transform.Find("HistCard/EmptyHint");
+
+        if (sessions == null || sessions.Count == 0)
+        {
+            if (emptyHint != null) emptyHint.gameObject.SetActive(true);
+            return;
+        }
+
+        if (emptyHint != null) emptyHint.gameObject.SetActive(false);
+
+        for (int i = 0; i < sessions.Count; i++)
+        {
+            var session = sessions[i];
+            int idx = i;
+
+            // 会话条目
+            var item = CreateUIObject($"Session_{i}", historyListContent);
+            var le = item.AddComponent<LayoutElement>();
+            le.preferredHeight = 64;
+
+            var itemImg = item.AddComponent<Image>();
+            itemImg.color = i % 2 == 0 ? new Color(1, 1, 1, 0.6f) : new Color(0.95f, 0.90f, 0.78f, 0.5f);
+            itemImg.raycastTarget = true;
+
+            var itemBtn = item.AddComponent<Button>();
+            itemBtn.onClick.AddListener(() => OnSessionItemClicked(idx));
+
+            // 角色名 + 时间
+            var topRow = CreateUIObject("TopRow", item.transform);
+            var trR = topRow.GetComponent<RectTransform>();
+            trR.anchorMin = new Vector2(0, 0.5f); trR.anchorMax = new Vector2(0.85f, 1);
+            trR.offsetMin = new Vector2(8, 0); trR.offsetMax = Vector2.zero;
+            var topTxt = topRow.AddComponent<Text>();
+            topTxt.font = Fnt;
+            topTxt.text = $"{session.personaName}  ·  {session.timestamp}";
+            topTxt.fontSize = 14; topTxt.color = ZhuRed; topTxt.alignment = TextAnchor.MiddleLeft;
+
+            // 预览文字
+            var prevRow = CreateUIObject("Preview", item.transform);
+            var pvR = prevRow.GetComponent<RectTransform>();
+            pvR.anchorMin = new Vector2(0, 0); pvR.anchorMax = new Vector2(0.85f, 0.5f);
+            pvR.offsetMin = new Vector2(8, 4); pvR.offsetMax = new Vector2(-8, 0);
+            var pvTxt = prevRow.AddComponent<Text>();
+            pvTxt.font = Fnt;
+            pvTxt.text = string.IsNullOrEmpty(session.preview) ? "(无消息)" : session.preview;
+            pvTxt.fontSize = 13; pvTxt.color = InkBlack; pvTxt.alignment = TextAnchor.MiddleLeft;
+
+            // 删除按钮
+            var delBtn = CreateUIObject("DelBtn", item.transform);
+            var dr = delBtn.GetComponent<RectTransform>();
+            dr.anchorMin = dr.anchorMax = new Vector2(1, 0.5f);
+            dr.pivot = new Vector2(1, 0.5f);
+            dr.sizeDelta = new Vector2(28, 28);
+            dr.anchoredPosition = new Vector2(-4, 0);
+            delBtn.AddComponent<Image>().color = new Color(0.76f, 0.21f, 0.19f, 0.7f);
+            var delBtnComp = delBtn.AddComponent<Button>();
+            delBtnComp.onClick.AddListener(() => OnDeleteSessionClicked(idx));
+            var delT = CreateUIObject("DT", delBtn.transform);
+            Stretch(delT);
+            var delTxt = delT.AddComponent<Text>();
+            delTxt.font = Fnt; delTxt.text = "删"; delTxt.fontSize = 12; delTxt.color = Color.white; delTxt.alignment = TextAnchor.MiddleCenter;
+        }
+    }
+
+    private void OnSessionItemClicked(int index)
+    {
+        var session = AIChatManager.Instance.LoadSession(index);
+        if (session == null) return;
+
+        // 清空当前聊天气泡
+        ClearChatBubbles();
+
+        // 更新角色显示
+        UpdatePersonaDisplay();
+
+        // 重建消息气泡
+        foreach (var msg in session.messages)
+        {
+            AddMessageBubble(msg.content, msg.role == "user");
+        }
+
+        // 防止再次显示开场白
+        lastGreetingPersonaId = session.personaId;
+
+        HideHistoryPanel();
+        AudioManager.Instance?.PlayClick();
+        StartCoroutine(ScrollToBottom());
+    }
+
+    private void OnDeleteSessionClicked(int index)
+    {
+        AIChatManager.Instance.DeleteSession(index);
+        PopulateHistoryList();
+        AudioManager.Instance?.PlayClick();
+    }
+
+    #endregion
+
     #region Button Handlers
 
     private void OnSendClicked()
@@ -488,6 +756,33 @@ public class AIChatUI : MonoBehaviour
         {
             SendUserMessage();
         }
+    }
+
+    private void OnNewChatClicked()
+    {
+        if (isTyping) CompleteTyping();
+
+        // 保存当前会话并清空历史
+        AIChatManager.Instance.NewSession();
+
+        // 清空气泡
+        ClearChatBubbles();
+
+        // 重置开场白标记，重新显示问候语
+        lastGreetingPersonaId = null;
+
+        var persona = AIChatManager.Instance.CurrentPersona;
+        AddMessageBubble(persona.greeting, false);
+        lastGreetingPersonaId = persona.id;
+
+        AudioManager.Instance?.PlayClick();
+        StartCoroutine(ScrollToBottom());
+    }
+
+    private void OnHistoryClicked()
+    {
+        AudioManager.Instance?.PlayClick();
+        ShowHistoryPanel();
     }
 
     private void OnQuizClicked()
@@ -571,6 +866,8 @@ public class AIChatUI : MonoBehaviour
         if (inputField != null) inputField.interactable = interactable;
         if (sendBtn != null) sendBtn.GetComponent<Button>().interactable = interactable;
         if (quizBtn != null) quizBtn.GetComponent<Button>().interactable = interactable;
+        if (newChatBtn != null) newChatBtn.GetComponent<Button>().interactable = interactable;
+        if (historyBtn != null) historyBtn.GetComponent<Button>().interactable = interactable;
     }
 
     /// <summary>

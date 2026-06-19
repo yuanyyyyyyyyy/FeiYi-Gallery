@@ -91,3 +91,32 @@ packages/
 # Burst cache
 # ───────────────────────────────────────
 [Bb]urstCache/
+
+# ───────────────────────────────────────
+# Chat session data (runtime generated, contains user conversations)
+# ───────────────────────────────────────
+chat_sessions.json
+
+# ───────────────────────────────────────
+# Unity Recorded sessions / Play recordings
+# ───────────────────────────────────────
+Recording/
+Recordings/
+Replays/
+
+# ───────────────────────────────────────
+# NUnit test results
+# ───────────────────────────────────────
+nunit-*.xml
+TestResults/
+
+# ───────────────────────────────────────
+# Memory captures / Profiler data
+# ───────────────────────────────────────
+*.memcp
+*.raw
+
+# ───────────────────────────────────────
+# Terrain assets (auto-generated)
+# ───────────────────────────────────────
+[Aa]ssets/Terrain/

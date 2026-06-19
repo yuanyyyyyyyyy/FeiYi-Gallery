@@ -2,7 +2,7 @@
 
 ## 一、项目概述
 
-本项目是一个基于 Unity 引擎的中国非物质文化遗产交互展示系统，用户可以浏览瓷器、剪纸、书法、民族乐器四大品类，查看 3D 展品模型、阅读文化详情、收藏感兴趣的展品、学习文化知识、了解历史故事，并参与知识答题。
+本项目是一个基于 Unity 引擎的中国非物质文化遗产交互展示系统，用户可以浏览瓷器、剪纸、书法、民族乐器、刺绣、茶艺、皮影戏、扎染蜡染八大品类，查看 3D 展品模型、阅读文化详情、收藏感兴趣的展品、学习文化知识、了解历史故事，并参与知识答题。
 
 | 项目信息 | 详情 |
 |---------|------|
@@ -12,7 +12,7 @@
 | 渲染管线 | 内置管线（Built-in） |
 | UI 框架 | UGUI（运行时代码创建，无 Prefab） |
 | 设计风格 | 新中式（宣纸米白 + 赭石棕 + 中国红 + 墨黑），支持3种主题切换 |
-| AI 对话 | 接入大语言模型 API，5种角色人设随品类自动切换 |
+| AI 对话 | 接入大语言模型 API，9种角色人设随品类自动切换，支持会话历史管理 |
 | 音频系统 | 五声音阶BGM + 4种SFX |
 
 ---
@@ -64,20 +64,20 @@ Assets/
 │   │   └── CharacterState.cs      # 角色状态枚举
 │   ├── AI/                        # AI对话系统
 │   │   ├── CharacterManager.cs    # 跨场景猫咪头像单例（浮动动画+拖动+品类感知）
-│   │   ├── AIChatManager.cs       # AI对话管理器（上下文+知识注入+角色切换）
-│   │   ├── AIChatUI.cs            # AI对话面板（消息气泡+打字机效果+考考我）
+│   │   ├── AIChatManager.cs       # AI对话管理器（上下文+知识注入+角色切换+会话历史管理）
+│   │   ├── AIChatUI.cs            # AI对话面板（消息气泡+打字机效果+考考我+新建会话+历史会话）
 │   │   ├── AIChatClient.cs        # HTTP API客户端
 │   │   ├── AIConfig.cs            # AI配置加载（API Key/URL/模型）
-│   │   └── AIPersona.cs           # 5种角色人设定义（守艺人+4品类变身）
+│   │   └── AIPersona.cs           # 9种角色人设定义（守艺人+8品类变身）
 │   └── Help/
 │       └── HelpManager.cs         # 帮助内容提供者（引导步骤+FAQ）
 ├── Resources/
 │   └── CatAvatar.png              # 猫咪头像图片
 └── StreamingAssets/
-    ├── Exhibits.json              # 展品数据（9件展品）
-    ├── Knowledge.json             # 文化知识（12篇）
-    ├── Events.json                # 历史事件（11篇）
-    ├── Quiz.json                  # 答题数据（12题）
+    ├── Exhibits.json              # 展品数据（17件展品）
+    ├── Knowledge.json             # 文化知识（24篇）
+    ├── Events.json                # 历史事件（23篇）
+    ├── Quiz.json                  # 答题数据（24题）
     └── Audio/                     # 音频文件
         ├── bgm.wav                # 五声音阶BGM
         ├── click.wav              # 点击音效
@@ -264,12 +264,16 @@ Canvas (ScreenSpaceOverlay)
     ├── 背景（宣纸米白 + 水墨晕染四角）
     ├── 亮度遮罩层（半透明黑色叠加，拖动亮度滑块时实时调整）
     ├── Header（印章小图标 + 标题 + 头像 + 用户名）
-    ├── ScrollView（横向滚动，4张品类卡片）
+    ├── ScrollView（横向滚动，8张品类卡片）
     │   └── Content (HorizontalLayoutGroup + ContentSizeFitter)
-    │       ├── 卡片1：瓷器（绫布边框 + 宣纸内芯 + 印章 + 文字）
+    │       ├── 卡片1：瓷器
     │       ├── 卡片2：剪纸
     │       ├── 卡片3：书法
-    │       └── 卡片4：民族乐器
+    │       ├── 卡片4：民族乐器
+    │       ├── 卡片5：刺绣
+    │       ├── 卡片6：茶艺
+    │       ├── 卡片7：皮影戏
+    │       └── 卡片8：扎染蜡染
     ├── 3D角色展示区（RenderTexture + 正交相机 + 自动走动小人，点击触发跳跃）
     ├── 功能入口（知识探索 + 历史故事）
     ├── NavBar（背包/设置/帮助/退出，竹简风格）
@@ -315,6 +319,14 @@ Canvas (ScreenSpaceCamera, planeDistance=20)
 | 编钟 | Cylinder 横梁 + 5个 Cylinder 钟体 + Cube 底座 |
 | 古筝 | Cube 琴身 + 8个 Cube 琴弦 |
 | 二胡 | Cylinder 琴杆 + Cylinder 琴筒 |
+| 苏绣双面绣 | Quad 绣布 + 4个 Cube 绣架 |
+| 蜀绣圆框 | Quad 绣布 + Cylinder 圆框 + 2个 Cube 支架 |
+| 紫砂壶 | Sphere 壶身 + Sphere 壶盖 + Cylinder 壶嘴 + Cylinder 壶把 |
+| 建盏兔毫盏 | Cylinder 碗身 + Cylinder 釉面 |
+| 关公皮影 | Quad 幕布 + Quad 人物 + Cylinder 操纵杆 |
+| 孙悟空皮影 | Quad 幕布 + Quad 人物 + 2个 Cylinder 操纵杆 |
+| 白族扎染布 | Quad 蓝底 + 3个 Quad 白花 |
+| 苗族蜡染布 | Quad 蓝底 + 3个 Quad 白纹 |
 
 **3D 模型交互**：
 - **拖拽旋转**：鼠标左键拖拽旋转模型
@@ -328,18 +340,18 @@ Canvas (ScreenSpaceCamera, planeDistance=20)
 **脚本**：`KnowledgeManager : UIFrame`
 
 **3 种视图**：
-1. **CategorySelect** — 4个品类卡片选择
-2. **KnowledgeBrowse** — 12篇文化知识卡片浏览（上一个/下一个）
-3. **Quiz** — 4选1答题模式（12题），答题后评分+评级
+1. **CategorySelect** — 8个品类卡片选择（4列2行网格）
+2. **KnowledgeBrowse** — 24篇文化知识卡片浏览（上一个/下一个）
+3. **Quiz** — 4选1答题模式（24题），答题后评分+评级
 
 ### 5.6 EventScene — 历史故事
 
 **脚本**：`EventManager : UIFrame`
 
 **3 种视图**：
-1. **CategorySelect** — 4个品类卡片选择
-2. **EventList** — 编号列表展示该品类下的历史故事
-3. **EventDetail** — 故事详情页（上一个/下一个）
+1. **CategorySelect** — 8个品类卡片选择（4列2行网格）
+2. **EventList** — 编号列表展示该品类下的历史故事（ScrollRect 可滚动）
+3. **EventDetail** — 故事详情页（印章+标题+时代+轮播卡片，上一个/下一个）
 
 ---
 
@@ -347,7 +359,7 @@ Canvas (ScreenSpaceCamera, planeDistance=20)
 
 ### 6.1 展品数据
 
-**文件**：`Assets/StreamingAssets/Exhibits.json`（9件展品）
+**文件**：`Assets/StreamingAssets/Exhibits.json`（17件展品）
 
 **数据结构**：
 ```csharp
@@ -367,11 +379,11 @@ public class ExhibitData {
 
 ### 6.2 知识 + 答题数据
 
-**文件**：`Assets/StreamingAssets/Knowledge.json`（12篇）、`Quiz.json`（12题）
+**文件**：`Assets/StreamingAssets/Knowledge.json`（24篇）、`Quiz.json`（24题）
 
 ### 6.3 事件数据
 
-**文件**：`Assets/StreamingAssets/Events.json`（11篇）
+**文件**：`Assets/StreamingAssets/Events.json`（23篇）
 
 ### 6.4 用户数据
 
@@ -402,7 +414,7 @@ public class ExhibitData {
 - JSON 文件：完整备份（`persistentDataPath/Backpack/{username}_backpack.json`）
 
 **功能**：
-- 按品类筛选（全部/瓷器/剪纸/书法/乐器）
+- 按品类筛选（全部/瓷器/剪纸/书法/民族乐器/刺绣/茶艺/皮影戏/扎染蜡染）
 - 搜索展品（实时过滤）
 - 删除收藏
 
@@ -463,7 +475,7 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 
 基于大语言模型 API 的智能对话，猫咪头像随品类自动切换角色身份：
 
-**角色人设（5种）**：
+**角色人设（9种）**：
 | 角色 | 品类 | 名称 | 说话风格 |
 |------|------|------|---------|
 | 守艺人 | 无（默认） | 守艺人 | 半文半白，儒雅亲切 |
@@ -471,6 +483,10 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 | 剪纸匠 | 剪纸 | 剪纸匠 | 温柔细腻，民间智慧 |
 | 书童 | 书法 | 书童 | 文雅谦逊，常引典故 |
 | 知音 | 民族乐器 | 知音 | 洒脱超然，乐理比喻 |
+| 绣娘 | 刺绣 | 绣娘 | 温婉细致，以针法喻万物 |
+| 茶师 | 茶艺 | 茶师 | 淡泊从容，以茶性喻人道 |
+| 影戏人 | 皮影戏 | 影戏人 | 说书人口吻，绘声绘色 |
+| 染匠 | 扎染蜡染 | 染匠 | 质朴自然，以蓝白喻人生 |
 
 **核心机制**：
 - `CharacterManager`（DontDestroyOnLoad 单例）每帧检测 `CurrentCategory` 变化，自动切换角色人设并更新头像标签
@@ -479,6 +495,7 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 - 点击头像打开对话面板，角色切换时清空旧对话并显示新角色开场白
 - `AIChatManager` 将角色描述、说话风格、品类知识注入 System Prompt，实现身份化对话
 - 对话面板含打字机效果、考考我出题、思考中提示等交互
+- **会话历史管理**：新建会话（保存当前→清空→显示新开场白）、历史会话（浏览/恢复/删除），持久化到 `persistentDataPath/chat_sessions.json`，最多保留20条
 
 ### 7.7 坑与经验
 
@@ -500,6 +517,11 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 | 返回主页角色不恢复 | CurrentCategory 未清除 | MainPanel.Start() 中清空 CurrentCategory |
 | 对话开场白不随角色变 | hasGreeting 标志只显示一次 | 改用 lastGreetingPersonaId 检测角色变化 |
 | 标签首次不更新 | DeferredInit 延迟创建时 lastCategory 已被设置 | 初始化末尾重置 lastCategory 并强制刷新 |
+| 品类卡片只显示4个 | 循环硬编码 `i < 4` 而非 `Categories.Length` | 全部改为 `i < Categories.Length` |
+| 知识探索空白卡片 | replace_all 误把测验选项循环也改成 Categories.Length(8) 导致数组越界 | 将4处测验选项循环改回 `i < 4` |
+| 事件列表无法滚动 | 绝对定位超出屏幕不可滚动 | 改为 ScrollRect + VerticalLayoutGroup + ContentSizeFitter |
+| 事件详情印章标题重叠 | 印章 anchor 0.88 与标题 0.84 间距过小 | 印章上移至 0.92，标题下移至 0.74~0.82 |
+| 历史面板X按钮无响应 | EmptyHint 文字铺满面板且 raycastTarget=true 拦截点击 | 设置 `raycastTarget=false` |
 
 ---
 

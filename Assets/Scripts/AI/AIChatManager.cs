@@ -28,6 +28,11 @@ public class AIChatManager : MonoBehaviour
     private List<ChatMessage> chatHistory = new List<ChatMessage>();
     private bool isWaitingResponse = false;
 
+    private List<ChatSession> savedSessions = new List<ChatSession>();
+    private const int MaxSavedSessions = 20;
+    private static readonly string SessionsFilePath =
+        System.IO.Path.Combine(Application.persistentDataPath, "chat_sessions.json");
+
     /// <summary>
     /// 当前角色人设
     /// </summary>
@@ -62,6 +67,9 @@ public class AIChatManager : MonoBehaviour
 
         // 默认使用守艺人
         currentPersona = AIPersona.GetGuardian();
+
+        // 加载历史会话
+        LoadSessionsFromDisk();
     }
 
     /// <summary>
@@ -161,6 +169,117 @@ public class AIChatManager : MonoBehaviour
     public void ClearHistory()
     {
         chatHistory.Clear();
+    }
+
+    // ──────────────────── 会话管理 ────────────────────
+
+    /// <summary>
+    /// 新建会话：保存当前会话后清空历史
+    /// </summary>
+    public void NewSession()
+    {
+        SaveCurrentSession();
+        chatHistory.Clear();
+    }
+
+    /// <summary>
+    /// 保存当前会话到历史列表
+    /// </summary>
+    public void SaveCurrentSession()
+    {
+        if (chatHistory.Count == 0) return;
+
+        var persona = CurrentPersona;
+        string firstUserMsg = null;
+        foreach (var msg in chatHistory)
+        {
+            if (msg.role == "user") { firstUserMsg = msg.content; break; }
+        }
+
+        var session = new ChatSession
+        {
+            personaId = persona.id,
+            personaName = persona.name,
+            category = persona.category,
+            timestamp = System.DateTime.Now.ToString("MM-dd HH:mm"),
+            preview = firstUserMsg ?? "",
+            messages = new List<ChatMessage>(chatHistory)
+        };
+
+        savedSessions.Insert(0, session);
+        if (savedSessions.Count > MaxSavedSessions)
+            savedSessions.RemoveRange(MaxSavedSessions, savedSessions.Count - MaxSavedSessions);
+
+        SaveSessionsToDisk();
+    }
+
+    /// <summary>
+    /// 获取所有已保存的会话
+    /// </summary>
+    public List<ChatSession> GetSavedSessions()
+    {
+        return savedSessions;
+    }
+
+    /// <summary>
+    /// 加载指定会话到当前上下文
+    /// </summary>
+    public ChatSession LoadSession(int index)
+    {
+        if (index < 0 || index >= savedSessions.Count) return null;
+
+        var session = savedSessions[index];
+
+        // 切换到会话的角色
+        SwitchToPersona(session.personaId);
+
+        // 加载消息
+        chatHistory.Clear();
+        chatHistory.AddRange(session.messages);
+
+        return session;
+    }
+
+    /// <summary>
+    /// 删除指定会话
+    /// </summary>
+    public void DeleteSession(int index)
+    {
+        if (index < 0 || index >= savedSessions.Count) return;
+        savedSessions.RemoveAt(index);
+        SaveSessionsToDisk();
+    }
+
+    private void SaveSessionsToDisk()
+    {
+        try
+        {
+            var wrapper = new ChatSessionList { sessions = savedSessions };
+            string json = JsonUtility.ToJson(wrapper, true);
+            System.IO.File.WriteAllText(SessionsFilePath, json);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[AIChatManager] 保存会话失败: {e.Message}");
+        }
+    }
+
+    private void LoadSessionsFromDisk()
+    {
+        try
+        {
+            if (System.IO.File.Exists(SessionsFilePath))
+            {
+                string json = System.IO.File.ReadAllText(SessionsFilePath);
+                var wrapper = JsonUtility.FromJson<ChatSessionList>(json);
+                if (wrapper?.sessions != null)
+                    savedSessions = wrapper.sessions;
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[AIChatManager] 加载会话失败: {e.Message}");
+        }
     }
 
     /// <summary>
@@ -307,4 +426,27 @@ public class AIChatManager : MonoBehaviour
 
         return sb.ToString();
     }
+}
+
+/// <summary>
+/// 单个聊天会话记录
+/// </summary>
+[System.Serializable]
+public class ChatSession
+{
+    public string personaId;
+    public string personaName;
+    public string category;
+    public string timestamp;
+    public string preview;
+    public List<ChatMessage> messages = new List<ChatMessage>();
+}
+
+/// <summary>
+/// 会话列表包装类（用于JSON序列化）
+/// </summary>
+[System.Serializable]
+public class ChatSessionList
+{
+    public List<ChatSession> sessions = new List<ChatSession>();
 }
