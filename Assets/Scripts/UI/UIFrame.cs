@@ -108,6 +108,7 @@ public abstract class UIFrame : MonoBehaviour
         if (GameManager.Instance == null) new GameObject("[GameManager]").AddComponent<GameManager>();
         if (SceneLoader.Instance == null) new GameObject("[SceneLoader]").AddComponent<SceneLoader>();
         if (AudioManager.Instance == null) new GameObject("[AudioManager]").AddComponent<AudioManager>();
+        if (CharacterManager.Instance == null) new GameObject("[CharacterManager]").AddComponent<CharacterManager>();
     }
 
     // ──────────────────── UI 基础方法 ────────────────────
@@ -332,6 +333,52 @@ public abstract class UIFrame : MonoBehaviour
 
     // ──────────────────── 弹窗遮罩 ────────────────────
 
+    /// <summary>
+    /// 为 ScrollRect 添加可见垂直滚动条 + 提升滚轮速度
+    /// </summary>
+    protected Scrollbar AddVerticalScrollbar(Transform panel, ScrollRect scrollRect, float width = 8f)
+    {
+        // 滚动条容器
+        var sbObj = NewUI("Scrollbar", panel);
+        var sbR = sbObj.GetComponent<RectTransform>();
+        sbR.anchorMin = new Vector2(1, 0); sbR.anchorMax = new Vector2(1, 1);
+        sbR.pivot = new Vector2(1f, 0.5f);
+        sbR.sizeDelta = new Vector2(width, 0);
+        sbR.anchoredPosition = Vector2.zero;
+
+        // 滚动条背景
+        var bgImg = sbObj.AddComponent<Image>();
+        bgImg.color = new Color(0, 0, 0, 0.15f);
+        bgImg.raycastTarget = true;
+
+        // 滑动区域
+        var slidingArea = NewUI("SlidingArea", sbObj.transform);
+        var saR = slidingArea.GetComponent<RectTransform>();
+        saR.anchorMin = Vector2.zero; saR.anchorMax = Vector2.one;
+        saR.offsetMin = new Vector2(1, 1); saR.offsetMax = new Vector2(-1, -1);
+
+        // 滑块
+        var handle = NewUI("Handle", slidingArea.transform);
+        var hR = handle.GetComponent<RectTransform>();
+        hR.anchorMin = Vector2.zero; hR.anchorMax = Vector2.one;
+        hR.offsetMin = Vector2.zero; hR.offsetMax = Vector2.zero;
+        var handleImg = handle.AddComponent<Image>();
+        handleImg.color = new Color(ZhuRed.r, ZhuRed.g, ZhuRed.b, 0.6f);
+        handleImg.raycastTarget = true;
+
+        var scrollbar = sbObj.AddComponent<Scrollbar>();
+        scrollbar.targetGraphic = handleImg;
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scrollbar.handleRect = hR;
+
+        scrollRect.verticalScrollbar = scrollbar;
+        scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
+        scrollRect.verticalScrollbarSpacing = 2f;
+        scrollRect.scrollSensitivity = 35f;
+
+        return scrollbar;
+    }
+
     protected GameObject MakeOverlay(Transform parent, string title, string content, Color accent)
     {
         var overlay = NewUI("Overlay", parent);
@@ -397,19 +444,22 @@ public abstract class UIFrame : MonoBehaviour
         scrollRect.inertia = true;
         scrollRect.decelerationRate = 0.1f;
 
+        // 添加可见滚动条 + 滚轮加速
+        AddVerticalScrollbar(panel.transform, scrollRect);
+
         // 关闭按钮
         var xObj = NewUI("X", panel.transform);
         var xr = xObj.GetComponent<RectTransform>();
         xr.anchorMin = xr.anchorMax = new Vector2(1, 1);
         xr.pivot = new Vector2(1, 1);
-        xr.sizeDelta = new Vector2(36, 36);
-        xr.anchoredPosition = new Vector2(-8, -8);
+        xr.sizeDelta = new Vector2(28, 28);
+        xr.anchoredPosition = new Vector2(-6, -6);
         xObj.AddComponent<Image>().color = ZhuRed;
         xObj.AddComponent<Button>().onClick.AddListener(() => overlay.SetActive(false));
         var xTxt = NewUI("XT", xObj.transform);
         Stretch(xTxt);
         var xt = xTxt.AddComponent<Text>();
-        xt.font = Font(); xt.text = "X"; xt.fontSize = 20; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
+        xt.font = Font(); xt.text = "X"; xt.fontSize = 16; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
 
         return overlay;
     }

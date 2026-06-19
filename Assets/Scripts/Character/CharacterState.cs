@@ -6,5 +6,10 @@ public enum CharacterState
     Idle,
     Walking,
     Jumping,
-    Interacting
+    Interacting,
+    Speaking,
+    Sitting,
+    LyingDown,
+    Waving,
+    Dancing
 }

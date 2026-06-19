@@ -127,7 +127,7 @@ public class ExhibitManager : UIFrame
         br.anchorMin = br.anchorMax = new Vector2(0, 0.5f);
         br.pivot = new Vector2(0, 0.5f);
         br.sizeDelta = new Vector2(100, 36);
-        br.anchoredPosition = new Vector2(12, 0);
+        br.anchoredPosition = new Vector2(30, 0);
         backObj.AddComponent<Image>().color = OchreBrown;
         backObj.AddComponent<Button>().onClick.AddListener(() => SceneLoader.Instance.LoadScene(SceneNames.Main));
         var btObj = NewUI("T", backObj.transform); Stretch(btObj);
@@ -142,12 +142,25 @@ public class ExhibitManager : UIFrame
         exhibitNameText = nameObj.AddComponent<Text>();
         exhibitNameText.font = Font(); exhibitNameText.fontSize = 20; exhibitNameText.color = InkTitle; exhibitNameText.alignment = TextAnchor.MiddleCenter;
 
+        // 问守艺人按钮
+        var chatBtnObj = NewUI("ChatBtn", header.transform);
+        var chatR = chatBtnObj.GetComponent<RectTransform>();
+        chatR.anchorMin = chatR.anchorMax = new Vector2(1f, 0.5f);
+        chatR.pivot = new Vector2(1f, 0.5f);
+        chatR.sizeDelta = new Vector2(100, 34);
+        chatR.anchoredPosition = new Vector2(-145, 0);
+        chatBtnObj.AddComponent<Image>().color = ChinaRed;
+        chatBtnObj.AddComponent<Button>().onClick.AddListener(OnChatClicked);
+        var chatTxtObj = NewUI("T", chatBtnObj.transform); Stretch(chatTxtObj);
+        var chatTxt = chatTxtObj.AddComponent<Text>();
+        chatTxt.font = Font(); chatTxt.text = "问守艺人"; chatTxt.fontSize = 14; chatTxt.color = Color.white; chatTxt.alignment = TextAnchor.MiddleCenter;
+
         collectBtn = NewUI("CollectBtn", header.transform);
         var cr = collectBtn.GetComponent<RectTransform>();
         cr.anchorMin = cr.anchorMax = new Vector2(1f, 0.5f);
         cr.pivot = new Vector2(1f, 0.5f);
         cr.sizeDelta = new Vector2(100, 34);
-        cr.anchoredPosition = new Vector2(-12, 0);
+        cr.anchoredPosition = new Vector2(-30, 0);
         collectBtn.AddComponent<Image>().color = OchreBrown;
         collectBtn.AddComponent<Button>().onClick.AddListener(OnCollectClicked);
         var cbtObj = NewUI("T", collectBtn.transform); Stretch(cbtObj);
@@ -666,6 +679,12 @@ public class ExhibitManager : UIFrame
         string shareText = $"【了不起的非遗】{currentExhibit.category} · {currentExhibit.name}\n\n{currentExhibit.description}\n\n{currentExhibit.history}\n\n—— 来自「了不起的非遗」交互展示系统";
         GUIUtility.systemCopyBuffer = shareText;
         ShowToast("分享内容已复制到剪贴板", JadeGreen);
+    }
+
+    private void OnChatClicked()
+    {
+        SfxClick();
+        CharacterManager.Instance?.ToggleChat();
     }
 
     private System.Collections.IEnumerator HeartbeatAnimation(Transform target)

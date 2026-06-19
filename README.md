@@ -12,6 +12,7 @@
 | 渲染管线 | 内置管线（Built-in） |
 | UI 框架 | UGUI（运行时代码创建，无 Prefab） |
 | 设计风格 | 新中式（宣纸米白 + 赭石棕 + 中国红 + 墨黑），支持3种主题切换 |
+| AI 对话 | 接入大语言模型 API，5种角色人设随品类自动切换 |
 | 音频系统 | 五声音阶BGM + 4种SFX |
 
 ---
@@ -61,8 +62,17 @@ Assets/
 │   ├── Character/
 │   │   ├── CharacterController2D.cs # 3D角色控制器（4状态状态机：Idle/Walking/Jumping/Interacting）
 │   │   └── CharacterState.cs      # 角色状态枚举
+│   ├── AI/                        # AI对话系统
+│   │   ├── CharacterManager.cs    # 跨场景猫咪头像单例（浮动动画+拖动+品类感知）
+│   │   ├── AIChatManager.cs       # AI对话管理器（上下文+知识注入+角色切换）
+│   │   ├── AIChatUI.cs            # AI对话面板（消息气泡+打字机效果+考考我）
+│   │   ├── AIChatClient.cs        # HTTP API客户端
+│   │   ├── AIConfig.cs            # AI配置加载（API Key/URL/模型）
+│   │   └── AIPersona.cs           # 5种角色人设定义（守艺人+4品类变身）
 │   └── Help/
 │       └── HelpManager.cs         # 帮助内容提供者（引导步骤+FAQ）
+├── Resources/
+│   └── CatAvatar.png              # 猫咪头像图片
 └── StreamingAssets/
     ├── Exhibits.json              # 展品数据（9件展品）
     ├── Knowledge.json             # 文化知识（12篇）
@@ -380,6 +390,8 @@ public class ExhibitData {
 | `Brightness` | 亮度设置 | 1.0 |
 | `ThemeStyle` | 主题风格 | "default"/"classic"/"minimal" |
 | `HasSeenGuide` | 是否已看过新手引导 | 1 |
+| `CharAvatarX` | 猫咪头像屏幕X坐标 | -200 |
+| `CharAvatarY` | 猫咪头像屏幕Y坐标 | 0 |
 
 ### 6.5 背包系统
 
@@ -447,7 +459,28 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 
 遮罩层设 `raycastTarget=false` 不拦截点击，`SetAsLastSibling()` 始终在最顶层渲染。
 
-### 7.6 坑与经验
+### 7.6 AI 对话系统
+
+基于大语言模型 API 的智能对话，猫咪头像随品类自动切换角色身份：
+
+**角色人设（5种）**：
+| 角色 | 品类 | 名称 | 说话风格 |
+|------|------|------|---------|
+| 守艺人 | 无（默认） | 守艺人 | 半文半白，儒雅亲切 |
+| 老窑工 | 瓷器 | 老窑工 | 朴实自豪，老匠人口吻 |
+| 剪纸匠 | 剪纸 | 剪纸匠 | 温柔细腻，民间智慧 |
+| 书童 | 书法 | 书童 | 文雅谦逊，常引典故 |
+| 知音 | 民族乐器 | 知音 | 洒脱超然，乐理比喻 |
+
+**核心机制**：
+- `CharacterManager`（DontDestroyOnLoad 单例）每帧检测 `CurrentCategory` 变化，自动切换角色人设并更新头像标签
+- 猫咪头像使用 `Resources.Load<Sprite>("CatAvatar")` 加载图片，带浮动呼吸动画 + 阴影闪烁
+- 头像可拖动到屏幕任意位置，坐标持久化到 `PlayerPrefs`
+- 点击头像打开对话面板，角色切换时清空旧对话并显示新角色开场白
+- `AIChatManager` 将角色描述、说话风格、品类知识注入 System Prompt，实现身份化对话
+- 对话面板含打字机效果、考考我出题、思考中提示等交互
+
+### 7.7 坑与经验
 
 | 问题 | 原因 | 解决方案 |
 |------|------|---------|
@@ -462,6 +495,11 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 | 弹窗点击穿透关闭 | 遮罩层添加了 Button 组件 | 移除遮罩 Button，设 `raycastTarget=true` 仅拦截点击 |
 | 抽屉文字空白 | 文字用固定 offsetMax=-110px，小屏幕下高度变负 | 改为 ScrollRect + 锚点比例布局，自适应任意高度 |
 | X 按钮不显示文字 | ✕ 字符不在 LegacyRuntime 字体中 | 改为 ASCII "X" |
+| 设置面板X按钮竖向拉长 | 锚点 `(1,0)~(1,1)` 在标题行内拉伸 | 改为右上角锚点 `(1,1)` + 固定 28×28 |
+| 乐器品类角色不切换 | MainPanel 用 "民族乐器"，AIPersona 用 "乐器" | 统一为 "民族乐器" |
+| 返回主页角色不恢复 | CurrentCategory 未清除 | MainPanel.Start() 中清空 CurrentCategory |
+| 对话开场白不随角色变 | hasGreeting 标志只显示一次 | 改用 lastGreetingPersonaId 检测角色变化 |
+| 标签首次不更新 | DeferredInit 延迟创建时 lastCategory 已被设置 | 初始化末尾重置 lastCategory 并强制刷新 |
 
 ---
 
