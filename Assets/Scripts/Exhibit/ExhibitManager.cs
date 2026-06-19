@@ -24,7 +24,11 @@ public class ExhibitManager : UIFrame
         { "vase", new Color(0.85f, 0.88f, 0.92f) }, { "cup", new Color(0.95f, 0.95f, 0.92f) },
         { "papercut", new Color(0.85f, 0.15f, 0.12f) }, { "scroll", new Color(0.92f, 0.88f, 0.78f) },
         { "bianzhong", new Color(0.65f, 0.50f, 0.20f) }, { "guzheng", new Color(0.45f, 0.25f, 0.12f) },
-        { "erhu", new Color(0.55f, 0.30f, 0.15f) }
+        { "erhu", new Color(0.55f, 0.30f, 0.15f) },
+        { "embroidery", new Color(0.18f, 0.42f, 0.32f) }, { "embroidery2", new Color(0.90f, 0.85f, 0.92f) },
+        { "teapot", new Color(0.45f, 0.30f, 0.15f) }, { "teacup", new Color(0.12f, 0.08f, 0.06f) },
+        { "shadow_puppet", new Color(0.80f, 0.20f, 0.12f) }, { "shadow_puppet2", new Color(0.85f, 0.65f, 0.10f) },
+        { "tie_dye", new Color(0.15f, 0.25f, 0.55f) }, { "tie_dye2", new Color(0.15f, 0.25f, 0.55f) }
     };
 
     private static readonly string[] TabTitles = { "历史背景", "制作工艺", "文化寓意" };
@@ -594,6 +598,66 @@ public class ExhibitManager : UIFrame
                 AddPart(PrimitiveType.Cylinder, p, new Vector3(0.04f, 1.2f, 0.04f), new Vector3(0, 0.6f, 0), c);
                 var q = AddPart(PrimitiveType.Cylinder, p, new Vector3(0.3f, 0.3f, 0.3f), new Vector3(0, -0.15f, 0), c);
                 q.transform.Rotate(90, 0, 0);
+                break;
+            case "embroidery":
+                // 绣架 + 绣布
+                AddPart(PrimitiveType.Quad, p, new Vector3(1.4f, 1.0f, 1f), Vector3.zero, c);
+                AddPart(PrimitiveType.Cube, p, new Vector3(1.5f, 0.06f, 0.06f), new Vector3(0, 0.55f, 0), new Color(0.35f, 0.20f, 0.08f));
+                AddPart(PrimitiveType.Cube, p, new Vector3(1.5f, 0.06f, 0.06f), new Vector3(0, -0.55f, 0), new Color(0.35f, 0.20f, 0.08f));
+                AddPart(PrimitiveType.Cube, p, new Vector3(0.06f, 1.1f, 0.06f), new Vector3(-0.72f, 0, 0), new Color(0.35f, 0.20f, 0.08f));
+                AddPart(PrimitiveType.Cube, p, new Vector3(0.06f, 1.1f, 0.06f), new Vector3(0.72f, 0, 0), new Color(0.35f, 0.20f, 0.08f));
+                break;
+            case "embroidery2":
+                // 双面绣圆框
+                AddPart(PrimitiveType.Quad, p, new Vector3(1.2f, 1.2f, 1f), Vector3.zero, c);
+                AddPart(PrimitiveType.Cylinder, p, new Vector3(0.06f, 0.06f, 1.3f), new Vector3(0, 0, 0), new Color(0.35f, 0.20f, 0.08f)).transform.Rotate(90, 0, 0);
+                AddPart(PrimitiveType.Cube, p, new Vector3(0.06f, 0.8f, 0.06f), new Vector3(-0.6f, -0.8f, 0), new Color(0.35f, 0.20f, 0.08f));
+                AddPart(PrimitiveType.Cube, p, new Vector3(0.06f, 0.8f, 0.06f), new Vector3(0.6f, -0.8f, 0), new Color(0.35f, 0.20f, 0.08f));
+                break;
+            case "teapot":
+                // 紫砂壶：壶身 + 壶盖 + 壶嘴 + 壶把
+                var body = AddPart(PrimitiveType.Sphere, p, new Vector3(0.8f, 0.7f, 0.8f), new Vector3(0, 0.3f, 0), c);
+                AddPart(PrimitiveType.Sphere, p, new Vector3(0.35f, 0.15f, 0.35f), new Vector3(0, 0.75f, 0), c);
+                AddPart(PrimitiveType.Cylinder, p, new Vector3(0.1f, 0.1f, 0.1f), new Vector3(0, 0.9f, 0), new Color(0.30f, 0.18f, 0.08f));
+                var spout = AddPart(PrimitiveType.Cylinder, p, new Vector3(0.12f, 0.4f, 0.12f), new Vector3(0.55f, 0.35f, 0), c);
+                spout.transform.Rotate(0, 0, -45);
+                var handle = AddPart(PrimitiveType.Cylinder, p, new Vector3(0.08f, 0.45f, 0.08f), new Vector3(-0.55f, 0.35f, 0), c);
+                handle.transform.Rotate(0, 0, 35);
+                break;
+            case "teacup":
+                // 建盏：碗身 + 釉面
+                AddPart(PrimitiveType.Cylinder, p, new Vector3(0.6f, 0.3f, 0.6f), new Vector3(0, 0.2f, 0), c);
+                AddPart(PrimitiveType.Cylinder, p, new Vector3(0.5f, 0.05f, 0.5f), new Vector3(0, 0.38f, 0), new Color(0.05f, 0.03f, 0.02f));
+                AddPart(PrimitiveType.Cylinder, p, new Vector3(0.35f, 0.02f, 0.35f), new Vector3(0, 0.4f, 0), new Color(0.15f, 0.12f, 0.08f));
+                break;
+            case "shadow_puppet":
+                // 关公皮影：人物 + 幕布
+                AddPart(PrimitiveType.Quad, p, new Vector3(1.6f, 1.2f, 0.9f), new Vector3(0, 0, -0.02f), new Color(0.95f, 0.92f, 0.85f));
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.4f, 0.5f, 1f), new Vector3(0, 0.4f, 0), c);
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.6f, 0.8f, 1f), new Vector3(0, -0.1f, 0), c);
+                AddPart(PrimitiveType.Cylinder, p, new Vector3(0.03f, 1.0f, 0.03f), new Vector3(0.5f, 0.1f, 0), new Color(0.5f, 0.35f, 0.1f));
+                break;
+            case "shadow_puppet2":
+                // 孙悟空皮影：人物 + 操纵杆
+                AddPart(PrimitiveType.Quad, p, new Vector3(1.6f, 1.2f, 0.9f), new Vector3(0, 0, -0.02f), new Color(0.95f, 0.92f, 0.85f));
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.35f, 0.45f, 1f), new Vector3(0, 0.4f, 0), c);
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.55f, 0.7f, 1f), new Vector3(0, -0.1f, 0), c);
+                AddPart(PrimitiveType.Cylinder, p, new Vector3(0.03f, 0.8f, 0.03f), new Vector3(0, 0.9f, 0), new Color(0.5f, 0.35f, 0.1f));
+                AddPart(PrimitiveType.Cylinder, p, new Vector3(0.03f, 0.6f, 0.03f), new Vector3(0.5f, 0.2f, 0), new Color(0.5f, 0.35f, 0.1f));
+                break;
+            case "tie_dye":
+                // 扎染布：蓝底白花
+                AddPart(PrimitiveType.Quad, p, new Vector3(1.5f, 1.5f, 1f), Vector3.zero, c);
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.3f, 0.3f, 1.1f), new Vector3(-0.35f, 0.3f, 0), Color.white);
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.25f, 0.25f, 1.1f), new Vector3(0.35f, -0.2f, 0), Color.white);
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.2f, 0.2f, 1.1f), new Vector3(0.1f, 0.5f, 0), Color.white);
+                break;
+            case "tie_dye2":
+                // 蜡染布：蓝底白纹
+                AddPart(PrimitiveType.Quad, p, new Vector3(1.5f, 1.5f, 1f), Vector3.zero, c);
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.8f, 0.02f, 1.1f), new Vector3(0, 0.4f, 0), Color.white);
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.02f, 0.8f, 1.1f), new Vector3(0.3f, -0.1f, 0), Color.white);
+                AddPart(PrimitiveType.Quad, p, new Vector3(0.3f, 0.02f, 1.1f), new Vector3(-0.3f, -0.3f, 0), Color.white);
                 break;
             default:
                 AddPart(PrimitiveType.Cube, p, new Vector3(0.8f, 0.8f, 0.8f), Vector3.zero, c);

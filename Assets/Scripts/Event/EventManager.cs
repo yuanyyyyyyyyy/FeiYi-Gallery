@@ -13,13 +13,15 @@ public class EventManager : UIFrame
     private static readonly Color EraColor = new Color(0.60f, 0.50f, 0.35f);
 
     // 品类配置
-    private static readonly string[] Categories = { "瓷器", "剪纸", "书法", "民族乐器" };
-    private static readonly string[] CategoryDescs = { "千年窑火 瓷韵流芳", "纸艺生花 巧夺天工", "笔墨丹青 翰墨飘香", "丝竹管弦 余音绕梁" };
+    private static readonly string[] Categories = { "瓷器", "剪纸", "书法", "民族乐器", "刺绣", "茶艺", "皮影戏", "扎染蜡染" };
+    private static readonly string[] CategoryDescs = { "千年窑火 瓷韵流芳", "纸艺生花 巧夺天工", "笔墨丹青 翰墨飘香", "丝竹管弦 余音绕梁", "千针万线 锦上添花", "茶香千年 壶中天地", "光影交错 戏说千古", "蓝白相映 染就乾坤" };
     private static readonly Color[] CategoryColors = {
         new Color(0.26f, 0.47f, 0.72f), new Color(0.80f, 0.20f, 0.18f),
-        new Color(0.35f, 0.35f, 0.38f), new Color(0.72f, 0.53f, 0.19f)
+        new Color(0.35f, 0.35f, 0.38f), new Color(0.72f, 0.53f, 0.19f),
+        new Color(0.18f, 0.42f, 0.32f), new Color(0.45f, 0.35f, 0.15f),
+        new Color(0.35f, 0.20f, 0.40f), new Color(0.15f, 0.25f, 0.55f)
     };
-    private static readonly string[] CategoryIcons = { "瓷", "剪", "书", "乐" };
+    private static readonly string[] CategoryIcons = { "瓷", "剪", "书", "乐", "绣", "茶", "影", "染" };
 
     // 视图状态
     private enum ViewState { CategorySelect, EventList, EventDetail }
@@ -142,11 +144,11 @@ public class EventManager : UIFrame
         // 顶部提示语
         AddDivider("Tip", categoryView.transform, new Vector2(0, -85), 550, "选择品类，探寻历史故事", GoldColor, InkBlack, 15);
 
-        // 4张品类卡片（2x2网格）
-        for (int i = 0; i < 4; i++)
+        // 品类卡片（4列2行网格）
+        for (int i = 0; i < Categories.Length; i++)
         {
-            int row = i / 2;
-            int col = i % 2;
+            int row = i / 4;
+            int col = i % 4;
             CreateCategoryCard(categoryView.transform, i, row, col);
         }
 
@@ -163,10 +165,10 @@ public class EventManager : UIFrame
 
     private void CreateCategoryCard(Transform parent, int idx, int row, int col)
     {
-        float cardW = 220, cardH = 150;
-        float gapX = 16, gapY = 16;
-        float x = (2 * col - 1) * (cardW / 2f + gapX / 2f);
-        float y = (1 - 2 * row) * (cardH / 2f + gapY / 2f) - 40;
+        float cardW = 180, cardH = 130;
+        float gapX = 14, gapY = 14;
+        float x = (col - 1.5f) * (cardW + gapX);
+        float y = (0.5f - row) * (cardH + gapY) - 30;
 
         var card = NewUI($"Card_{Categories[idx]}", parent);
         var cr = card.GetComponent<RectTransform>();
@@ -229,17 +231,42 @@ public class EventManager : UIFrame
         var catText = catHeader.AddComponent<Text>();
         catText.font = Font(); catText.fontSize = 22; catText.color = ZhuRed; catText.alignment = TextAnchor.MiddleCenter;
 
-        // 事件列表容器
-        var listContainer = NewUI("ListContainer", eventListView.transform);
-        var lcr = listContainer.GetComponent<RectTransform>();
-        lcr.anchorMin = new Vector2(0.08f, 0.15f);
-        lcr.anchorMax = new Vector2(0.92f, 0.82f);
-        lcr.offsetMin = lcr.offsetMax = Vector2.zero;
-        var lcImg = listContainer.AddComponent<Image>();
-        lcImg.color = new Color(0, 0, 0, 0);
-        lcImg.raycastTarget = false;
+        // 事件列表容器 — ScrollRect 可滚动
+        var scrollObj = NewUI("EventScroll", eventListView.transform);
+        var slR = scrollObj.GetComponent<RectTransform>();
+        slR.anchorMin = new Vector2(0.08f, 0.10f);
+        slR.anchorMax = new Vector2(0.92f, 0.82f);
+        slR.offsetMin = slR.offsetMax = Vector2.zero;
+        var slImg = scrollObj.AddComponent<Image>();
+        slImg.color = Color.white; slImg.raycastTarget = true;
+        var slMask = scrollObj.AddComponent<Mask>();
+        slMask.showMaskGraphic = false;
 
-        eventListContent = listContainer.transform;
+        var content = NewUI("ListContent", scrollObj.transform);
+        var cr = content.GetComponent<RectTransform>();
+        cr.anchorMin = new Vector2(0, 1); cr.anchorMax = new Vector2(1, 1);
+        cr.pivot = new Vector2(0.5f, 1f);
+        cr.sizeDelta = new Vector2(0, 0);
+        var vlg = content.AddComponent<VerticalLayoutGroup>();
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = true;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        vlg.spacing = 8;
+        vlg.padding = new RectOffset(8, 8, 8, 8);
+        var csf = content.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var scrollRect = scrollObj.AddComponent<ScrollRect>();
+        scrollRect.content = cr;
+        scrollRect.viewport = slR;
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.inertia = true;
+
+        eventListContent = content.transform;
     }
 
     private void RefreshEventList()
@@ -251,18 +278,17 @@ public class EventManager : UIFrame
         if (currentEvents == null || currentEvents.Count == 0) return;
 
         float cardH = 80;
-        float gapY = 8;
-        float totalH = currentEvents.Count * cardH + (currentEvents.Count - 1) * gapY;
 
         for (int i = 0; i < currentEvents.Count; i++)
         {
             var item = currentEvents[i];
             var card = NewUI($"Event_{i}", eventListContent);
             var cr = card.GetComponent<RectTransform>();
-            cr.anchorMin = cr.anchorMax = new Vector2(0.5f, 1f);
+            cr.anchorMin = new Vector2(0, 1); cr.anchorMax = new Vector2(1, 1);
             cr.pivot = new Vector2(0.5f, 1f);
-            cr.sizeDelta = new Vector2(460, cardH);
-            cr.anchoredPosition = new Vector2(0, -(i * (cardH + gapY)));
+            cr.sizeDelta = new Vector2(0, cardH);
+            var le = card.AddComponent<LayoutElement>();
+            le.preferredHeight = cardH;
 
             var cImg = card.AddComponent<Image>();
             cImg.color = i % 2 == 0 ? CardBg : new Color(0.96f, 0.94f, 0.88f);
@@ -328,7 +354,7 @@ public class EventManager : UIFrame
         // 详情卡片容器
         var cardContainer = NewUI("DetailCard", eventDetailView.transform);
         var ccr = cardContainer.GetComponent<RectTransform>();
-        ccr.anchorMin = new Vector2(0.08f, 0.15f);
+        ccr.anchorMin = new Vector2(0.08f, 0.12f);
         ccr.anchorMax = new Vector2(0.92f, 0.82f);
         ccr.offsetMin = ccr.offsetMax = Vector2.zero;
         var ccImg = cardContainer.AddComponent<Image>();
@@ -336,14 +362,14 @@ public class EventManager : UIFrame
         ccImg.raycastTarget = false;
         AddBorderLines(cardContainer);
 
-        // 印章图标
+        // 印章图标 — 顶部居中
         detailIconObj = AddSealIcon("DIcon", cardContainer.transform, new Vector2(0.5f, 0.92f), 28, "史", 24);
 
-        // 标题
+        // 标题 — 印章下方
         var titleObj = NewUI("DTitle", cardContainer.transform);
         var dtr = titleObj.GetComponent<RectTransform>();
-        dtr.anchorMin = new Vector2(0.08f, 0.78f);
-        dtr.anchorMax = new Vector2(0.92f, 0.88f);
+        dtr.anchorMin = new Vector2(0.08f, 0.74f);
+        dtr.anchorMax = new Vector2(0.92f, 0.82f);
         dtr.offsetMin = dtr.offsetMax = Vector2.zero;
         detailTitleText = titleObj.AddComponent<Text>();
         detailTitleText.font = Font(); detailTitleText.fontSize = 20; detailTitleText.color = InkBlack; detailTitleText.alignment = TextAnchor.MiddleCenter;
@@ -351,20 +377,20 @@ public class EventManager : UIFrame
         // 时代标签
         var eraObj = NewUI("DEra", cardContainer.transform);
         var der = eraObj.GetComponent<RectTransform>();
-        der.anchorMin = new Vector2(0.08f, 0.72f);
-        der.anchorMax = new Vector2(0.92f, 0.78f);
+        der.anchorMin = new Vector2(0.08f, 0.68f);
+        der.anchorMax = new Vector2(0.92f, 0.74f);
         der.offsetMin = der.offsetMax = Vector2.zero;
         detailEraText = eraObj.AddComponent<Text>();
         detailEraText.font = Font(); detailEraText.fontSize = 14; detailEraText.color = EraColor; detailEraText.alignment = TextAnchor.MiddleCenter;
 
         // 分隔线
-        AddDivider("DDiv", cardContainer.transform, new Vector2(0, 20), 350, "◆", GoldColor, GoldColor, 12);
+        AddDivider("DDiv", cardContainer.transform, new Vector2(0, -20), 350, "◆", GoldColor, GoldColor, 12);
 
         // ── 轮播区域 ──
         carouselObj = NewUI("Carousel", cardContainer.transform);
         var carR = carouselObj.GetComponent<RectTransform>();
-        carR.anchorMin = new Vector2(0.04f, 0.05f);
-        carR.anchorMax = new Vector2(0.96f, 0.68f);
+        carR.anchorMin = new Vector2(0.04f, 0.04f);
+        carR.anchorMax = new Vector2(0.96f, 0.64f);
         carR.offsetMin = carR.offsetMax = Vector2.zero;
 
         // 3张轮播卡片

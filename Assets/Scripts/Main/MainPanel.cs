@@ -8,13 +8,15 @@ using System.Collections.Generic;
 /// </summary>
 public class MainPanel : UIFrame
 {
-    private static readonly string[] Categories = { "瓷器", "剪纸", "书法", "民族乐器" };
-    private static readonly string[] CategoryDescs = { "千年窑火 瓷韵流芳", "纸艺生花 巧夺天工", "笔墨丹青 翰墨飘香", "丝竹管弦 余音绕梁" };
+    private static readonly string[] Categories = { "瓷器", "剪纸", "书法", "民族乐器", "刺绣", "茶艺", "皮影戏", "扎染蜡染" };
+    private static readonly string[] CategoryDescs = { "千年窑火 瓷韵流芳", "纸艺生花 巧夺天工", "笔墨丹青 翰墨飘香", "丝竹管弦 余音绕梁", "千针万线 锦上添花", "茶香千年 壶中天地", "光影交错 戏说千古", "蓝白相映 染就乾坤" };
     private static readonly Color[] CategoryColors = {
         new Color(0.26f, 0.47f, 0.72f), new Color(0.80f, 0.20f, 0.18f),
-        new Color(0.35f, 0.35f, 0.38f), new Color(0.72f, 0.53f, 0.19f)
+        new Color(0.35f, 0.35f, 0.38f), new Color(0.72f, 0.53f, 0.19f),
+        new Color(0.18f, 0.42f, 0.32f), new Color(0.45f, 0.35f, 0.15f),
+        new Color(0.35f, 0.20f, 0.40f), new Color(0.15f, 0.25f, 0.55f)
     };
-    private static readonly string[] CategoryIcons = { "瓷", "剪", "书", "乐" };
+    private static readonly string[] CategoryIcons = { "瓷", "剪", "书", "乐", "绣", "茶", "影", "染" };
 
     private GameObject backpackPanel, settingsPanel, helpPanel;
     private Transform canvasTRef;
@@ -222,8 +224,8 @@ public class MainPanel : UIFrame
         scrollRect.inertia = true;
         scrollRect.decelerationRate = 0.1f;
 
-        // ── 创建 4 张卡片 ──
-        for (int i = 0; i < 4; i++)
+        // ── 创建品类卡片 ──
+        for (int i = 0; i < Categories.Length; i++)
         {
             CreateScrollCard(content.transform, i);
         }
@@ -1278,7 +1280,7 @@ public class MainPanel : UIFrame
         flHlg.childForceExpandWidth = true;
         flHlg.childForceExpandHeight = false;
 
-        string[] filterNames = { "全部", "瓷器", "剪纸", "书法", "乐器" };
+        string[] filterNames = { "全部", "瓷器", "剪纸", "书法", "民族乐器", "刺绣", "茶艺", "皮影戏", "扎染蜡染" };
         for (int i = 0; i < filterNames.Length; i++)
         {
             var fBtn = NewUI($"Filter_{i}", filterRow.transform);

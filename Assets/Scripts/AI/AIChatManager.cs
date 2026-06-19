@@ -290,7 +290,7 @@ public class AIChatManager : MonoBehaviour
         {
             // 守艺人通用模式，注入所有品类的概要
             sb.AppendLine("【非遗四大品类概览】");
-            string[] categories = { "瓷器", "剪纸", "书法", "民族乐器" };
+            string[] categories = { "瓷器", "剪纸", "书法", "民族乐器", "刺绣", "茶艺", "皮影戏", "扎染蜡染" };
             foreach (var cat in categories)
             {
                 var exhibits = GameManager.Instance.GetExhibitsByCategory(cat);

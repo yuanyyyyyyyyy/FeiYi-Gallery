@@ -16,13 +16,15 @@ public class KnowledgeManager : UIFrame
     private static readonly Color WrongRed      = new Color(0.80f, 0.18f, 0.18f);
 
     // 品类配置（与 MainPanel 一致）
-    private static readonly string[] Categories = { "瓷器", "剪纸", "书法", "民族乐器" };
-    private static readonly string[] CategoryDescs = { "千年窑火 瓷韵流芳", "纸艺生花 巧夺天工", "笔墨丹青 翰墨飘香", "丝竹管弦 余音绕梁" };
+    private static readonly string[] Categories = { "瓷器", "剪纸", "书法", "民族乐器", "刺绣", "茶艺", "皮影戏", "扎染蜡染" };
+    private static readonly string[] CategoryDescs = { "千年窑火 瓷韵流芳", "纸艺生花 巧夺天工", "笔墨丹青 翰墨飘香", "丝竹管弦 余音绕梁", "千针万线 锦上添花", "茶香千年 壶中天地", "光影交错 戏说千古", "蓝白相映 染就乾坤" };
     private static readonly Color[] CategoryColors = {
         new Color(0.26f, 0.47f, 0.72f), new Color(0.80f, 0.20f, 0.18f),
-        new Color(0.35f, 0.35f, 0.38f), new Color(0.72f, 0.53f, 0.19f)
+        new Color(0.35f, 0.35f, 0.38f), new Color(0.72f, 0.53f, 0.19f),
+        new Color(0.18f, 0.42f, 0.32f), new Color(0.45f, 0.35f, 0.15f),
+        new Color(0.35f, 0.20f, 0.40f), new Color(0.15f, 0.25f, 0.55f)
     };
-    private static readonly string[] CategoryIcons = { "瓷", "剪", "书", "乐" };
+    private static readonly string[] CategoryIcons = { "瓷", "剪", "书", "乐", "绣", "茶", "影", "染" };
 
     // 视图状态
     private enum ViewState { CategorySelect, KnowledgeBrowse, Quiz }
@@ -142,11 +144,11 @@ public class KnowledgeManager : UIFrame
         // 顶部提示语
         AddDivider("Tip", categoryView.transform, new Vector2(0, -85), 550, "选择品类，开启知识之旅", GoldColor, InkBlack, 15);
 
-        // 4张品类卡片（2x2网格）
-        for (int i = 0; i < 4; i++)
+        // 品类卡片（4列2行网格）
+        for (int i = 0; i < Categories.Length; i++)
         {
-            int row = i / 2;
-            int col = i % 2;
+            int row = i / 4;
+            int col = i % 4;
             CreateCategoryCard(categoryView.transform, i, row, col);
         }
 
@@ -163,11 +165,11 @@ public class KnowledgeManager : UIFrame
 
     private void CreateCategoryCard(Transform parent, int idx, int row, int col)
     {
-        float cardW = 220, cardH = 150;
-        float gapX = 16, gapY = 16;
-        // 以屏幕中心偏下为原点，2列2行对称布局
-        float x = (2 * col - 1) * (cardW / 2f + gapX / 2f);
-        float y = (1 - 2 * row) * (cardH / 2f + gapY / 2f) - 40;
+        float cardW = 180, cardH = 130;
+        float gapX = 14, gapY = 14;
+        // 4列2行网格布局
+        float x = (col - 1.5f) * (cardW + gapX);
+        float y = (0.5f - row) * (cardH + gapY) - 30;
 
         var card = NewUI($"Card_{Categories[idx]}", parent);
         var cr = card.GetComponent<RectTransform>();
