@@ -226,10 +226,8 @@ public class CharacterManager : MonoBehaviour
         overlayCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
         overlayCanvas.sortingOrder = 999; // 最高层
         var scaler = canvasObj.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        scaler.matchWidthOrHeight = 0.5f;
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+        scaler.scaleFactor = 1f;
         canvasObj.AddComponent<GraphicRaycaster>();
 
         // 角色头像按钮 — 增大一倍

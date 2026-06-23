@@ -124,12 +124,14 @@ public class MainPanel : UIFrame
 
     private void CreateFeatureEntry(Transform parent)
     {
-        // 功能入口容器 — 在 ScrollView 和 NavBar 之间
+        // 功能入口容器 — 在 ScrollView 和 NavBar 之间（固定偏移，跟随 NavBar 顶部）
         var entryBar = NewUI("FeatureEntry", parent);
         var er = entryBar.GetComponent<RectTransform>();
-        er.anchorMin = new Vector2(0.08f, 0.14f);
-        er.anchorMax = new Vector2(0.92f, 0.24f);
-        er.offsetMin = er.offsetMax = Vector2.zero;
+        er.anchorMin = new Vector2(0.08f, 0f);
+        er.anchorMax = new Vector2(0.92f, 0f);
+        er.pivot = new Vector2(0.5f, 0f);
+        er.sizeDelta = new Vector2(0f, 70f);
+        er.anchoredPosition = new Vector2(0f, 60f);
         var eImg = entryBar.AddComponent<Image>();
         eImg.color = new Color(0, 0, 0, 0);
         eImg.raycastTarget = false;
@@ -179,12 +181,13 @@ public class MainPanel : UIFrame
 
     private void CreateScrollView(Transform parent)
     {
-        // ScrollView 容器 — 占据标题栏和导航栏之间的区域
+        // ScrollView 容器 — 占据标题栏底部和功能入口顶部之间的区域（固定偏移）
         var scrollObj = NewUI("ScrollView", parent);
         var sr = scrollObj.GetComponent<RectTransform>();
-        sr.anchorMin = new Vector2(0.08f, 0.26f);
-        sr.anchorMax = new Vector2(0.92f, 0.88f);
-        sr.sizeDelta = Vector2.zero;
+        sr.anchorMin = new Vector2(0.08f, 0f);
+        sr.anchorMax = new Vector2(0.92f, 1f);
+        sr.offsetMin = new Vector2(0f, 140f);   // 在 FeatureEntry 上方
+        sr.offsetMax = new Vector2(0f, -70f);    // 在 Header 下方
         var sImg = scrollObj.AddComponent<Image>(); sImg.color = new Color(0, 0, 0, 0); sImg.raycastTarget = true;
         var scrollRect = scrollObj.AddComponent<ScrollRect>();
 
