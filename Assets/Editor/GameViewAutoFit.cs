@@ -38,18 +38,16 @@ public static class GameViewAutoFit
         SetFloat(zaType, za, "m_VScaleMin", 0.05f);
         SetBool(zaType, za, "m_ScaleWithWindow", true);
 
+        // 缩放自适应窗口大小（不裁切），不放大内容
         var scale = (Vector2)zaType.GetField("m_Scale", flags).GetValue(za);
         var drawArea = (Rect)zaType.GetField("m_DrawArea", flags).GetValue(za);
         var targetSize = (Vector2)gvType.GetProperty("targetRenderSize", flags).GetValue(gv, null);
         if (targetSize.x > 0 && targetSize.y > 0 && drawArea.width > 0 && drawArea.height > 0)
         {
-            float fitW = drawArea.width / targetSize.x;
-            float fitH = drawArea.height / targetSize.y;
-            // 在严格 fit 基础上放大 5%，但不超过高度填满值，避免裁切 header/footer
-            float target = Mathf.Min(fitW * 1.05f, fitH);
-            if (Mathf.Abs(scale.x - target) > 0.02f)
+            float fit = Mathf.Min(drawArea.width / targetSize.x, drawArea.height / targetSize.y);
+            if (Mathf.Abs(scale.x - fit) > 0.02f)
             {
-                zaType.GetField("m_Scale", flags).SetValue(za, new Vector2(target, target));
+                zaType.GetField("m_Scale", flags).SetValue(za, new Vector2(fit, fit));
             }
         }
     }
