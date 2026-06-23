@@ -145,8 +145,9 @@ public class MainPanel : UIFrame
         knowBtn.AddComponent<Image>().color = new Color(0.96f, 0.92f, 0.88f);
         var kBtn = knowBtn.AddComponent<Button>();
         kBtn.onClick.AddListener(() => { SfxClick(); SceneLoader.Instance.LoadScene(SceneNames.Knowledge); });
-        // 印章小图标
-        AddSealIcon("KIcon", knowBtn.transform, new Vector2(0.18f, 0.5f), 16, "知", 13);
+        // 印章小图标 — 用知识探索对应的品类色（蓝色）
+        var kIcon = AddSealIcon("KIcon", knowBtn.transform, new Vector2(0.18f, 0.5f), 16, "知", 13);
+        kIcon.GetComponent<Image>().color = CategoryColors[0]; // 瓷器蓝
         // 文字
         var kLabel = NewUI("KLabel", knowBtn.transform);
         var klR = kLabel.GetComponent<RectTransform>();
@@ -165,8 +166,9 @@ public class MainPanel : UIFrame
         evtBtn.AddComponent<Image>().color = new Color(0.96f, 0.92f, 0.88f);
         var eBtn = evtBtn.AddComponent<Button>();
         eBtn.onClick.AddListener(() => { SfxClick(); SceneLoader.Instance.LoadScene(SceneNames.Event); });
-        // 印章小图标
-        AddSealIcon("EIcon", evtBtn.transform, new Vector2(0.18f, 0.5f), 16, "史", 13);
+        // 印章小图标 — 用历史故事对应的品类色（金色）
+        var eIcon = AddSealIcon("EIcon", evtBtn.transform, new Vector2(0.18f, 0.5f), 16, "史", 13);
+        eIcon.GetComponent<Image>().color = CategoryColors[3]; // 民族乐器金
         // 文字
         var eLabel = NewUI("ELabel", evtBtn.transform);
         var elR = eLabel.GetComponent<RectTransform>();
