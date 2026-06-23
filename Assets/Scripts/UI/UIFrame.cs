@@ -20,19 +20,21 @@ public abstract class UIFrame : MonoBehaviour
     }
 
     // 主题色板
-    private static readonly Color T_Default_ZhuRed    = new Color(0.76f, 0.21f, 0.19f);
-    private static readonly Color T_Default_GoldColor = new Color(0.83f, 0.65f, 0.27f);
-    private static readonly Color T_Default_InkBlack  = new Color(0.17f, 0.17f, 0.17f);
-    private static readonly Color T_Default_XuanPaper = new Color(0.96f, 0.90f, 0.78f);
-    private static readonly Color T_Default_JadeGreen= new Color(0.18f, 0.48f, 0.43f);
-    private static readonly Color T_Default_DarkBar   = new Color(0.10f, 0.10f, 0.10f, 0.95f);
+    // Default — 青瓷雅韵：青瓷绿 + 暖白 + 淡金
+    private static readonly Color T_Default_ZhuRed    = new Color(0.357f, 0.549f, 0.494f);  // #5B8C7E 青瓷绿
+    private static readonly Color T_Default_GoldColor = new Color(0.788f, 0.663f, 0.380f);  // #C9A961 古铜金
+    private static readonly Color T_Default_InkBlack  = new Color(0.227f, 0.290f, 0.259f);  // #3A4A42 松烟墨
+    private static readonly Color T_Default_XuanPaper = new Color(0.949f, 0.941f, 0.914f);  // #F2F0E9 霁白
+    private static readonly Color T_Default_JadeGreen= new Color(0.722f, 0.361f, 0.235f);  // #B85C3C 赭石红
+    private static readonly Color T_Default_DarkBar   = new Color(0.173f, 0.227f, 0.208f, 0.95f); // #2C3A35 苍翠
 
-    private static readonly Color T_Classic_ZhuRed    = new Color(0.62f, 0.14f, 0.12f);  // 暗朱红
-    private static readonly Color T_Classic_GoldColor = new Color(0.90f, 0.72f, 0.30f);  // 明金
-    private static readonly Color T_Classic_InkBlack  = new Color(0.88f, 0.82f, 0.68f);  // 浅金文字（深底用）
-    private static readonly Color T_Classic_XuanPaper = new Color(0.22f, 0.17f, 0.12f);  // 深褐底
-    private static readonly Color T_Classic_JadeGreen= new Color(0.28f, 0.58f, 0.52f);  // 翡翠亮
-    private static readonly Color T_Classic_DarkBar   = new Color(0.14f, 0.10f, 0.07f, 0.97f);
+    // Classic — 水墨竹青：黑白灰 + 一抹竹青
+    private static readonly Color T_Classic_ZhuRed    = new Color(0.290f, 0.486f, 0.349f);  // #4A7C59 竹青
+    private static readonly Color T_Classic_GoldColor = new Color(0.722f, 0.600f, 0.408f);  // #B89968 原木
+    private static readonly Color T_Classic_InkBlack  = new Color(0.886f, 0.886f, 0.875f);  // #E2E2DF 浅灰文字（深底用）
+    private static readonly Color T_Classic_XuanPaper = new Color(0.176f, 0.176f, 0.176f);  // #2D2D2D 焦墨底
+    private static readonly Color T_Classic_JadeGreen= new Color(0.545f, 0.227f, 0.227f);  // #8B3A3A 绛红
+    private static readonly Color T_Classic_DarkBar   = new Color(0.118f, 0.165f, 0.133f, 0.97f); // #1E2A22 竹影
 
     private static readonly Color T_Minimal_ZhuRed    = new Color(0.72f, 0.30f, 0.28f);  // 柔红
     private static readonly Color T_Minimal_GoldColor = new Color(0.50f, 0.50f, 0.50f);  // 中灰
