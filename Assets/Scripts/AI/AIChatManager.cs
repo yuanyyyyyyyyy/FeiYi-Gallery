@@ -110,12 +110,18 @@ public class AIChatManager : MonoBehaviour
     /// <param name="onComplete">AI回复回调</param>
     public void SendMessage(string userMessage, System.Action<string> onComplete)
     {
+        SendMessage(userMessage, onComplete, null);
+    }
+
+    /// <summary>
+    /// 发送用户消息（带状态回调）
+    /// </summary>
+    public void SendMessage(string userMessage, System.Action<string> onComplete, System.Action<string> onStatus)
+    {
         if (isWaitingResponse) return;
 
-        // 添加用户消息到历史
         chatHistory.Add(new ChatMessage { role = "user", content = userMessage });
 
-        // 构建完整消息列表（system + 历史）
         var allMessages = BuildMessages();
 
         isWaitingResponse = true;
@@ -129,7 +135,7 @@ public class AIChatManager : MonoBehaviour
             }
 
             onComplete?.Invoke(response);
-        });
+        }, onStatus);
     }
 
     /// <summary>
@@ -137,6 +143,14 @@ public class AIChatManager : MonoBehaviour
     /// </summary>
     /// <param name="onComplete">AI回复回调</param>
     public void RequestQuiz(System.Action<string> onComplete)
+    {
+        RequestQuiz(onComplete, null);
+    }
+
+    /// <summary>
+    /// 请求出题（考考我，带状态回调）
+    /// </summary>
+    public void RequestQuiz(System.Action<string> onComplete, System.Action<string> onStatus)
     {
         string category = currentPersona.category;
         var quizList = GameManager.Instance.GetQuizByCategory(category ?? "瓷器");
@@ -160,7 +174,7 @@ public class AIChatManager : MonoBehaviour
         }
 
         string quizMessage = "请考考我吧！" + quizContext;
-        SendMessage(quizMessage, onComplete);
+        SendMessage(quizMessage, onComplete, onStatus);
     }
 
     /// <summary>

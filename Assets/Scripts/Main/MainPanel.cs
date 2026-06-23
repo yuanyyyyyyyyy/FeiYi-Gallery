@@ -62,12 +62,8 @@ public class MainPanel : UIFrame
         // ── 弹窗 ──
         settingsPanel = CreateSettingsPanel(root);
 
-        // 帮助弹窗 — 从 HelpManager 读取引导步骤和FAQ
-        var guideSteps = HelpManager.GetGuideSteps();
-        var faqItems = HelpManager.GetFAQ();
-        string helpContent = "【使用引导】\n\n" + string.Join("\n\n", guideSteps)
-            + "\n\n━━━━━━━━━━━━━━━━\n\n【常见问题】\n\n" + string.Join("\n\n", faqItems);
-        helpPanel = MakeOverlay(root, "帮助", helpContent, ZhuRed);
+        // 帮助弹窗 — Tab 样式：使用引导 / 常见问题 / 关于系统
+        helpPanel = CreateHelpPanel(root);
     }
 
     // ──────────────────── 顶部标题栏 ────────────────────
@@ -410,6 +406,308 @@ public class MainPanel : UIFrame
         br.pivot = new Vector2(0.5f, 0f);
         br.sizeDelta = new Vector2(0, 2);
         var bImg = bot.AddComponent<Image>(); bImg.color = ZhuRed; bImg.raycastTarget = false;
+    }
+
+    // ──────────────────── 帮助面板 ────────────────────
+
+    private GameObject CreateHelpPanel(Transform parent)
+    {
+        var overlay = NewUI("HelpOverlay", parent);
+        Stretch(overlay);
+        var overlayImg = overlay.AddComponent<Image>();
+        overlayImg.color = new Color(0, 0, 0, 0.85f);
+        overlayImg.raycastTarget = false;
+        overlay.SetActive(false);
+
+        var panel = NewUI("Panel", overlay.transform);
+        var pr = panel.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
+        pr.sizeDelta = new Vector2(440, Mathf.Min(880, Screen.height * 0.9f));
+        var panelImg = panel.AddComponent<Image>();
+        panelImg.color = XuanPaper;
+        panelImg.raycastTarget = true;
+
+        // 顶部朱红装饰线
+        var topLine = NewUI("TopLine", panel.transform);
+        var tlr = topLine.GetComponent<RectTransform>();
+        tlr.anchorMin = new Vector2(0, 1); tlr.anchorMax = new Vector2(1, 1);
+        tlr.pivot = new Vector2(0.5f, 1f); tlr.sizeDelta = new Vector2(0, 3);
+        topLine.AddComponent<Image>().color = ZhuRed;
+
+        // 标题行
+        var titleRow = NewUI("TitleRow", panel.transform);
+        var trr = titleRow.GetComponent<RectTransform>();
+        trr.anchorMin = new Vector2(0, 1); trr.anchorMax = new Vector2(1, 1);
+        trr.pivot = new Vector2(0.5f, 1f);
+        trr.sizeDelta = new Vector2(0, 44);
+        trr.anchoredPosition = Vector2.zero;
+
+        var titleObj = NewUI("Title", titleRow.transform);
+        var tr = titleObj.GetComponent<RectTransform>();
+        tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one;
+        tr.offsetMin = new Vector2(10, 0); tr.offsetMax = new Vector2(-50, 0);
+        var tt = titleObj.AddComponent<Text>();
+        tt.font = Font(); tt.text = "帮助"; tt.fontSize = 24; tt.color = ZhuRed; tt.alignment = TextAnchor.MiddleCenter;
+
+        var xObj = NewUI("X", panel.transform);
+        var xr = xObj.GetComponent<RectTransform>();
+        xr.anchorMin = xr.anchorMax = new Vector2(1, 1);
+        xr.pivot = new Vector2(1, 1);
+        xr.sizeDelta = new Vector2(28, 28);
+        xr.anchoredPosition = new Vector2(-6, -6);
+        xObj.AddComponent<Image>().color = ZhuRed;
+        xObj.AddComponent<Button>().onClick.AddListener(() => overlay.SetActive(false));
+        var xTxt = NewUI("XT", xObj.transform); Stretch(xTxt);
+        var xt = xTxt.AddComponent<Text>();
+        xt.font = Font(); xt.text = "X"; xt.fontSize = 16; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
+
+        // ── Tab 栏 ──
+        string[] tabLabels = { "使用引导", "常见问题", "关于系统" };
+        var tabContainer = NewUI("TabBar", panel.transform);
+        var tbcR = tabContainer.GetComponent<RectTransform>();
+        tbcR.anchorMin = new Vector2(0, 1); tbcR.anchorMax = new Vector2(1, 1);
+        tbcR.pivot = new Vector2(0.5f, 1f);
+        tbcR.sizeDelta = new Vector2(0, 40);
+        tbcR.anchoredPosition = new Vector2(0, -46);
+
+        var tabBtns = new Button[tabLabels.Length];
+        var tabHighlight = new Image[tabLabels.Length];
+        for (int i = 0; i < tabLabels.Length; i++)
+        {
+            var tab = NewUI($"Tab_{i}", tabContainer.transform);
+            var tR = tab.GetComponent<RectTransform>();
+            float cellW = 1f / tabLabels.Length;
+            tR.anchorMin = new Vector2(i * cellW, 0);
+            tR.anchorMax = new Vector2((i + 1) * cellW, 1);
+            tR.offsetMin = tR.offsetMax = Vector2.zero;
+
+            tab.AddComponent<Image>().color = new Color(0, 0, 0, 0.05f);
+            tabBtns[i] = tab.AddComponent<Button>();
+
+            var tabTxt = NewUI("T", tab.transform); Stretch(tabTxt);
+            var tT = tabTxt.AddComponent<Text>();
+            tT.font = Font(); tT.text = tabLabels[i]; tT.fontSize = 14; tT.color = InkBlack; tT.alignment = TextAnchor.MiddleCenter;
+
+            var hl = NewUI("HL", tab.transform);
+            var hlR = hl.GetComponent<RectTransform>();
+            hlR.anchorMin = new Vector2(0, 0); hlR.anchorMax = new Vector2(1, 0);
+            hlR.pivot = new Vector2(0.5f, 0f);
+            hlR.sizeDelta = new Vector2(0, 3);
+            tabHighlight[i] = hl.AddComponent<Image>();
+            tabHighlight[i].color = ZhuRed;
+            tabHighlight[i].raycastTarget = false;
+            tabHighlight[i].enabled = (i == 0);
+        }
+
+        // ── Tab 页面容器 ──
+        var pagesContainer = NewUI("Pages", panel.transform);
+        var pcR = pagesContainer.GetComponent<RectTransform>();
+        pcR.anchorMin = Vector2.zero; pcR.anchorMax = Vector2.one;
+        pcR.offsetMin = Vector2.zero; pcR.offsetMax = new Vector2(0, -90);
+
+        var tabPages = new GameObject[tabLabels.Length];
+
+        for (int i = 0; i < tabLabels.Length; i++)
+        {
+            var pageObj = NewUI($"Page_{i}", pagesContainer.transform);
+            Stretch(pageObj);
+            var pageImg = pageObj.AddComponent<Image>();
+            pageImg.color = new Color(0, 0, 0, 0);
+            pageImg.raycastTarget = false;
+
+            var viewport = NewUI("Viewport", pageObj.transform);
+            Stretch(viewport);
+            var vpImg = viewport.AddComponent<Image>();
+            vpImg.color = new Color(1, 1, 1, 0.01f); vpImg.raycastTarget = true;
+            viewport.AddComponent<Mask>().showMaskGraphic = false;
+
+            var content = NewUI("Content", viewport.transform);
+            var cr = content.GetComponent<RectTransform>();
+            cr.anchorMin = new Vector2(0, 1); cr.anchorMax = new Vector2(1, 1);
+            cr.pivot = new Vector2(0.5f, 1f);
+            cr.offsetMin = new Vector2(20, 0); cr.offsetMax = new Vector2(-20, 0);
+
+            var scroll = pageObj.AddComponent<ScrollRect>();
+            scroll.content = cr;
+            scroll.viewport = viewport.GetComponent<RectTransform>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.inertia = true;
+            AddVerticalScrollbar(pageObj.transform, scroll);
+
+            tabPages[i] = pageObj;
+            pageObj.SetActive(i == 0);
+
+            float y = -10f;
+            switch (i)
+            {
+                case 0: // 使用引导
+                    y = AddGuideSteps(content.transform, y);
+                    break;
+                case 1: // 常见问题
+                    y = AddFAQItems(content.transform, y);
+                    break;
+                case 2: // 关于系统
+                    y = AddAboutSystem(content.transform, y);
+                    break;
+            }
+            cr.sizeDelta = new Vector2(0, -y + 20);
+        }
+
+        // Tab 切换逻辑
+        for (int i = 0; i < tabLabels.Length; i++)
+        {
+            int idx = i;
+            tabBtns[i].onClick.AddListener(() =>
+            {
+                for (int j = 0; j < tabPages.Length; j++)
+                {
+                    tabPages[j].SetActive(j == idx);
+                    tabHighlight[j].enabled = (j == idx);
+                }
+            });
+        }
+
+        return overlay;
+    }
+
+    private float AddGuideSteps(Transform parent, float y)
+    {
+        var steps = HelpManager.GetGuideSteps();
+        for (int i = 0; i < steps.Length; i++)
+        {
+            // 卡片容器
+            var card = NewUI($"Step_{i}", parent);
+            var cr = card.GetComponent<RectTransform>();
+            cr.anchorMin = new Vector2(0, 1); cr.anchorMax = new Vector2(1, 1);
+            cr.pivot = new Vector2(0.5f, 1f);
+            cr.sizeDelta = new Vector2(0, 0);
+            cr.anchoredPosition = new Vector2(0, y);
+
+            var cardImg = card.AddComponent<Image>();
+            cardImg.color = (i == 0) ? new Color(0.95f, 0.88f, 0.78f) : new Color(0.94f, 0.92f, 0.86f);
+
+            // 步骤编号印章
+            var seal = AddSealIcon("Num", card.transform, new Vector2(0.12f, 0.5f), 28, (i + 1).ToString(), 20);
+            seal.GetComponent<Image>().color = ZhuRed;
+
+            // 步骤文字
+            var txtObj = NewUI("T", card.transform);
+            var tr = txtObj.GetComponent<RectTransform>();
+            tr.anchorMin = new Vector2(0.25f, 0.08f); tr.anchorMax = new Vector2(0.96f, 0.92f);
+            tr.offsetMin = tr.offsetMax = Vector2.zero;
+            var t = txtObj.AddComponent<Text>();
+            t.font = Font(); t.text = steps[i]; t.fontSize = 15; t.color = InkBlack;
+            t.alignment = TextAnchor.UpperLeft; t.lineSpacing = 1.3f;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+
+            float cardH = Mathf.Max(56, EstimateTextHeight(steps[i], 15, 280) + 24);
+            cr.sizeDelta = new Vector2(0, cardH);
+
+            y -= cardH + 10f;
+        }
+        return y;
+    }
+
+    private float AddFAQItems(Transform parent, float y)
+    {
+        var faqs = HelpManager.GetFAQ();
+        for (int i = 0; i < faqs.Length; i++)
+        {
+            var card = NewUI($"FAQ_{i}", parent);
+            var cr = card.GetComponent<RectTransform>();
+            cr.anchorMin = new Vector2(0, 1); cr.anchorMax = new Vector2(1, 1);
+            cr.pivot = new Vector2(0.5f, 1f);
+            cr.sizeDelta = new Vector2(0, 0);
+            cr.anchoredPosition = new Vector2(0, y);
+
+            var cardImg = card.AddComponent<Image>();
+            cardImg.color = (i % 2 == 0) ? new Color(0.93f, 0.91f, 0.85f) : new Color(0.95f, 0.93f, 0.88f);
+
+            // 问号印章
+            var seal = AddSealIcon("Q", card.transform, new Vector2(0.12f, 0.5f), 28, "?", 20);
+            seal.GetComponent<Image>().color = JadeGreen;
+
+            var txtObj = NewUI("T", card.transform);
+            var tr = txtObj.GetComponent<RectTransform>();
+            tr.anchorMin = new Vector2(0.25f, 0.08f); tr.anchorMax = new Vector2(0.96f, 0.92f);
+            tr.offsetMin = tr.offsetMax = Vector2.zero;
+            var t = txtObj.AddComponent<Text>();
+            t.font = Font(); t.text = faqs[i]; t.fontSize = 15; t.color = InkBlack;
+            t.alignment = TextAnchor.UpperLeft; t.lineSpacing = 1.3f;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+
+            float cardH = Mathf.Max(50, EstimateTextHeight(faqs[i], 15, 280) + 24);
+            cr.sizeDelta = new Vector2(0, cardH);
+
+            y -= cardH + 8f;
+        }
+        return y;
+    }
+
+    private float AddAboutSystem(Transform parent, float y)
+    {
+        // 系统介绍
+        y = AddHelpInfoCard(parent, y, "系统名称", "了不起的非遗", ZhuRed);
+        y = AddHelpInfoCard(parent, y, "版本", "v1.0.0", GoldColor);
+        y = AddHelpInfoCard(parent, y, "简介",
+            "本系统是一个展示中国非物质文化遗产和传统工艺的互动平台，涵盖瓷器、剪纸、书法、民族乐器、刺绣、茶艺、皮影戏、扎染蜡染等八大品类，提供3D交互浏览和文化知识学习功能。",
+            InkBlack);
+        y = AddHelpInfoCard(parent, y, "技术栈", "Unity 2022 · C# · UGUI", JadeGreen);
+        y = AddHelpInfoCard(parent, y, "开发者", "《三维交互设计》课程项目", new Color(0.45f, 0.35f, 0.15f));
+        return y;
+    }
+
+    private float AddHelpInfoCard(Transform parent, float y, string label, string value, Color accent)
+    {
+        var card = NewUI($"Info_{label}", parent);
+        var cr = card.GetComponent<RectTransform>();
+        cr.anchorMin = new Vector2(0, 1); cr.anchorMax = new Vector2(1, 1);
+        cr.pivot = new Vector2(0.5f, 1f);
+        cr.sizeDelta = new Vector2(0, 0);
+        cr.anchoredPosition = new Vector2(0, y);
+
+        card.AddComponent<Image>().color = new Color(0.94f, 0.92f, 0.86f);
+
+        var lblObj = NewUI("Lbl", card.transform);
+        var lr = lblObj.GetComponent<RectTransform>();
+        lr.anchorMin = new Vector2(0.05f, 0); lr.anchorMax = new Vector2(0.3f, 1);
+        lr.offsetMin = lr.offsetMax = Vector2.zero;
+        var lt = lblObj.AddComponent<Text>();
+        lt.font = Font(); lt.text = label; lt.fontSize = 14; lt.color = accent; lt.alignment = TextAnchor.MiddleLeft;
+
+        var valObj = NewUI("Val", card.transform);
+        var vr = valObj.GetComponent<RectTransform>();
+        vr.anchorMin = new Vector2(0.32f, 0); vr.anchorMax = new Vector2(0.95f, 1);
+        vr.offsetMin = vr.offsetMax = Vector2.zero;
+        var vt = valObj.AddComponent<Text>();
+        vt.font = Font(); vt.text = value; vt.fontSize = 15; vt.color = InkBlack;
+        vt.alignment = TextAnchor.MiddleLeft; vt.lineSpacing = 1.3f;
+        vt.horizontalOverflow = HorizontalWrapMode.Wrap;
+        vt.verticalOverflow = VerticalWrapMode.Overflow;
+
+        float cardH = Mathf.Max(40, EstimateTextHeight(value, 15, 230) + 16);
+        cr.sizeDelta = new Vector2(0, cardH);
+
+        return y - cardH - 8f;
+    }
+
+    private float EstimateTextHeight(string text, int fontSize, float width)
+    {
+        if (string.IsNullOrEmpty(text)) return fontSize;
+        int lines = 1;
+        int currentWidth = 0;
+        foreach (var ch in text)
+        {
+            if (ch == '\n') { lines++; currentWidth = 0; continue; }
+            currentWidth += (ch > 127 ? fontSize : fontSize / 2 + 2);
+            if (currentWidth > width) { lines++; currentWidth = (ch > 127 ? fontSize : fontSize / 2 + 2); }
+        }
+        // Unity line height ≈ fontSize * lineSpacing(1.3) * baseScale(~1.25)
+        return lines * fontSize * 1.6f;
     }
 
     // ──────────────────── 设置面板 ────────────────────
@@ -1302,11 +1600,15 @@ public class MainPanel : UIFrame
         {
             statusText.text = "✓ 连接成功";
             fillImg.color = JadeGreen;
+            PlayerPrefs.SetInt("AI_ConnectionVerified", 1);
+            PlayerPrefs.Save();
         }
         else
         {
             statusText.text = "✗ " + resultMsg;
             fillImg.color = ZhuRed;
+            PlayerPrefs.SetInt("AI_ConnectionVerified", 0);
+            PlayerPrefs.Save();
         }
 
         // 等 1.5 秒后自动消失

@@ -42,6 +42,12 @@ public class AIChatUI : MonoBehaviour
     private bool isTyping = false;
     private string lastGreetingPersonaId = null;
 
+    // 思考状态动画
+    private Coroutine thinkingAnimCoroutine;
+    private Text thinkingText;
+    private GameObject thinkingBarFill;
+    private float thinkingStartTime;
+
     private static Font Fnt => UIFont.Get();
 
     private void Awake()
@@ -265,22 +271,48 @@ public class AIChatUI : MonoBehaviour
         scrollRect.movementType = ScrollRect.MovementType.Clamped;
         scrollRect.inertia = true;
 
-        // 思考中提示（简化版）
+        // 思考中提示（带动画状态 + 进度条）
         thinkingObj = CreateUIObject("Thinking", content.transform);
-        var thLe = CreateUIObject("LE", thinkingObj.transform);
-        var thImg = thLe.AddComponent<Image>();
-        thImg.color = new Color(0.96f, 0.90f, 0.78f, 0.8f);
+        var thLe = thinkingObj.AddComponent<LayoutElement>();
+        thLe.preferredHeight = 52;
+        thLe.flexibleWidth = 0;
+        var thBubble = CreateUIObject("Bubble", thinkingObj.transform);
+        var tbR = thBubble.GetComponent<RectTransform>();
+        tbR.anchorMin = Vector2.zero; tbR.anchorMax = Vector2.one;
+        tbR.offsetMin = Vector2.zero; tbR.offsetMax = Vector2.zero;
+        var thImg = thBubble.AddComponent<Image>();
+        thImg.color = new Color(0.96f, 0.90f, 0.78f, 0.9f);
         thImg.raycastTarget = false;
-        var thTextObj = CreateUIObject("T", thLe.transform);
-        Stretch(thTextObj);
-        var thText = thTextObj.AddComponent<Text>();
-        thText.font = Fnt;
-        if (thText.font == null) thText.font = Font.CreateDynamicFontFromOSFont("Arial", 15);
-        thText.text = "守艺人思考中……"; thText.fontSize = 15;
-        thText.color = new Color(0.17f, 0.17f, 0.17f, 0.6f);
-        thText.alignment = TextAnchor.MiddleLeft;
-        var thCsf = thLe.AddComponent<ContentSizeFitter>();
-        thCsf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // 状态文字（左对齐，带计时）
+        var thTextObj = CreateUIObject("T", thBubble.transform);
+        var thTxtR = thTextObj.GetComponent<RectTransform>();
+        thTxtR.anchorMin = new Vector2(0, 0.4f); thTxtR.anchorMax = new Vector2(1, 1f);
+        thTxtR.offsetMin = new Vector2(12, 0); thTxtR.offsetMax = new Vector2(-12, -2);
+        thinkingText = thTextObj.AddComponent<Text>();
+        thinkingText.font = Fnt;
+        if (thinkingText.font == null) thinkingText.font = Font.CreateDynamicFontFromOSFont("Arial", 15);
+        thinkingText.text = "正在连接AI服务..."; thinkingText.fontSize = 14;
+        thinkingText.color = new Color(0.17f, 0.17f, 0.17f, 0.7f);
+        thinkingText.alignment = TextAnchor.MiddleLeft;
+
+        // 进度条背景
+        var barBg = CreateUIObject("BarBg", thBubble.transform);
+        var bbR = barBg.GetComponent<RectTransform>();
+        bbR.anchorMin = new Vector2(0, 0.08f); bbR.anchorMax = new Vector2(1, 0.32f);
+        bbR.offsetMin = new Vector2(12, 0); bbR.offsetMax = new Vector2(-12, 0);
+        barBg.AddComponent<Image>().color = new Color(0.85f, 0.82f, 0.75f, 0.6f);
+
+        // 进度条填充
+        thinkingBarFill = CreateUIObject("BarFill", barBg.transform);
+        var bfR = thinkingBarFill.GetComponent<RectTransform>();
+        bfR.anchorMin = new Vector2(0, 0); bfR.anchorMax = new Vector2(0, 1);
+        bfR.pivot = new Vector2(0, 0.5f);
+        bfR.offsetMin = bfR.offsetMax = Vector2.zero;
+        var bfImg = thinkingBarFill.AddComponent<Image>();
+        bfImg.color = ZhuRed;
+        bfImg.raycastTarget = false;
+
         thinkingObj.SetActive(false);
     }
 
@@ -793,18 +825,14 @@ public class AIChatUI : MonoBehaviour
             CompleteTyping();
         }
 
-        // 添加用户消息气泡
         AddMessageBubble("请考考我！", true);
         AudioManager.Instance?.PlayClick();
 
-        // 显示思考中
-        thinkingObj.transform.SetAsLastSibling();
-        thinkingObj.SetActive(true);
-        SetInputInteractable(false);
+        StartThinkingIndicator();
 
         AIChatManager.Instance.RequestQuiz((response) =>
         {
-            thinkingObj.SetActive(false);
+            StopThinkingIndicator();
 
             if (response != null)
             {
@@ -812,11 +840,14 @@ public class AIChatUI : MonoBehaviour
             }
             else
             {
-                AddMessageBubble("网络似乎有些问题，请稍后再试。", false);
+                AddMessageBubble("无法连接到AI服务，请在「设置 → AI设置」中检查配置并测试连接。", false);
             }
 
             SetInputInteractable(true);
             StartCoroutine(ScrollToBottom());
+        }, (status) =>
+        {
+            UpdateThinkingStatus(status);
         });
     }
 
@@ -825,7 +856,6 @@ public class AIChatUI : MonoBehaviour
         if (inputField == null || string.IsNullOrEmpty(inputField.text.Trim())) return;
         if (AIChatManager.Instance.IsWaitingResponse) return;
 
-        // 如果正在打字，先完成
         if (isTyping)
         {
             CompleteTyping();
@@ -834,18 +864,14 @@ public class AIChatUI : MonoBehaviour
         string msg = inputField.text.Trim();
         inputField.text = "";
 
-        // 添加用户消息气泡
         AddMessageBubble(msg, true);
         AudioManager.Instance?.PlayClick();
 
-        // 显示思考中
-        thinkingObj.transform.SetAsLastSibling();
-        thinkingObj.SetActive(true);
-        SetInputInteractable(false);
+        StartThinkingIndicator();
 
         AIChatManager.Instance.SendMessage(msg, (response) =>
         {
-            thinkingObj.SetActive(false);
+            StopThinkingIndicator();
 
             if (response != null)
             {
@@ -853,12 +879,81 @@ public class AIChatUI : MonoBehaviour
             }
             else
             {
-                AddMessageBubble("抱歉，暂时无法回应，请检查网络或AI服务配置。", false);
+                AddMessageBubble("无法连接到AI服务，请在「设置 → AI设置」中检查配置并测试连接。", false);
             }
 
             SetInputInteractable(true);
             StartCoroutine(ScrollToBottom());
+        }, (status) =>
+        {
+            UpdateThinkingStatus(status);
         });
+    }
+
+    private void StartThinkingIndicator()
+    {
+        thinkingObj.transform.SetAsLastSibling();
+        thinkingObj.SetActive(true);
+        SetInputInteractable(false);
+        thinkingStartTime = Time.time;
+        currentStatus = "守艺人思考中";
+        if (thinkingAnimCoroutine != null) StopCoroutine(thinkingAnimCoroutine);
+        thinkingAnimCoroutine = StartCoroutine(ThinkingAnimRoutine());
+    }
+
+    private void StopThinkingIndicator()
+    {
+        if (thinkingAnimCoroutine != null)
+        {
+            StopCoroutine(thinkingAnimCoroutine);
+            thinkingAnimCoroutine = null;
+        }
+        thinkingObj.SetActive(false);
+    }
+
+    private void UpdateThinkingStatus(string status)
+    {
+        // status 由 AIChatClient 通过 onStatus 回调传入
+        // 在 ThinkingAnimRoutine 中会与计时器组合显示
+        if (!string.IsNullOrEmpty(status))
+            currentStatus = status;
+    }
+
+    private string currentStatus = "正在连接AI服务...";
+
+    private IEnumerator ThinkingAnimRoutine()
+    {
+        string[] dots = { "·", "··", "···" };
+        int dotIdx = 0;
+        float barWidth = 0f;
+        var barRect = thinkingBarFill?.GetComponent<RectTransform>();
+        float parentWidth = 0f;
+
+        // 等一帧让布局计算完成
+        yield return null;
+        if (barRect?.parent != null)
+            parentWidth = ((RectTransform)barRect.parent).rect.width;
+
+        while (true)
+        {
+            float elapsed = Time.time - thinkingStartTime;
+            int seconds = Mathf.FloorToInt(elapsed);
+            string timeStr = seconds >= 60 ? $"{seconds / 60}:{seconds % 60:00}" : $"{seconds}s";
+
+            if (thinkingText != null)
+            {
+                thinkingText.text = $"{currentStatus} {dots[dotIdx]}  ({timeStr})";
+            }
+
+            // 进度条：假进度，缓慢爬升到 90%，重试时跳到 50%
+            float target = currentStatus.Contains("重试") ? 0.5f : 0.9f;
+            barWidth = Mathf.MoveTowards(barWidth, target, Time.deltaTime * 0.4f);
+            if (barRect != null && parentWidth > 0)
+                barRect.sizeDelta = new Vector2(parentWidth * barWidth, 0);
+
+            dotIdx = (dotIdx + 1) % 3;
+            yield return new WaitForSeconds(0.5f);
+        }
     }
 
     private void SetInputInteractable(bool interactable)
@@ -905,11 +1000,11 @@ public class AIChatUI : MonoBehaviour
         }
 
         // 更新思考提示文字
-        if (thinkingObj != null)
+        if (thinkingText != null)
         {
-            var txt = thinkingObj.GetComponentInChildren<Text>();
-            if (txt != null)
-                txt.text = $"{persona.name}思考中……";
+            // 仅在非等待状态时更新基础文字
+            if (!AIChatManager.Instance.IsWaitingResponse)
+                thinkingText.text = $"{persona.name}思考中...";
         }
 
         // 更新输入框占位文字

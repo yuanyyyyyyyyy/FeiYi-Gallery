@@ -22,7 +22,9 @@
 ```
 Assets/
 ├── Editor/
-│   └── PlayFromLogin.cs          # 编辑器脚本：点Play自动从登录页启动
+│   ├── PlayFromLogin.cs          # 编辑器脚本：点Play自动从登录页启动
+│   ├── GameViewAutoFit.cs         # Game View缩放自动修正（0.3x~1.3x自由滑动）
+│   └── FilterRawInputNoise.cs    # Console自动过滤Raw Input噪音日志
 ├── Scenes/
 │   ├── LoginScene.scene           # 场景0：登录注册
 │   ├── StartScene.scene           # 场景1：欢迎页
@@ -277,8 +279,8 @@ Canvas (ScreenSpaceOverlay)
     ├── 3D角色展示区（RenderTexture + 正交相机 + 自动走动小人，点击触发跳跃）
     ├── 功能入口（知识探索 + 历史故事）
     ├── NavBar（背包/设置/帮助/退出，竹简风格）
-    ├── 设置弹窗（音量/亮度/主题/头像/密码，确认修改按钮）
-    ├── 帮助弹窗（HelpManager 引导+FAQ，ScrollRect 可滚动）
+    ├── 设置弹窗（Tab分页：音量亮度/主题/头像/密码/AI设置，每页独立滚动）
+    ├── 帮助弹窗（Tab分页：使用引导/常见问题/关于系统，每页独立滚动）
     ├── 背包弹窗（收藏列表 + 搜索 + 品类筛选 + 删除）
     └── 退出确认对话框（确认/取消，Toast 提示"已安全退出"）
 ```
@@ -286,10 +288,11 @@ Canvas (ScreenSpaceOverlay)
 **关键设计**：
 - **卷轴画卷式布局**：`ScrollRect` + `HorizontalLayoutGroup` + `ContentSizeFitter`
 - **3D角色**：程序化几何体拼接的低多边形小人，4种状态（Idle/Walking/Jumping/Interacting），自动走动+点击跳跃
-- **设置面板**：5个功能区（音量滑块、亮度滑块+遮罩层、主题切换、头像选择、密码修改）
+- **设置面板**：5个 Tab 分页（音量亮度/主题/头像/密码/AI设置），每页独立 ScrollRect 滚动
 - **亮度调节**：拖动滑块调整半透明黑色遮罩层的 alpha（0~0.55），视觉上实现屏幕变暗/变亮
+- **AI测试连接**：持久进度条浮层，模拟连接进度，成功/失败视觉反馈
 - **退出确认**：点击退出弹出 `MakeConfirmDialog` 确认对话框，确认后 `ShowToast("已安全退出")`
-- **帮助弹窗**：从 `HelpManager` 动态读取引导步骤和FAQ，ScrollRect 可滚动
+- **帮助弹窗**：Tab 分页（使用引导/常见问题/关于系统），引导步骤带编号印章卡片，FAQ带问号印章，关于系统展示版本信息
 
 ### 5.4 ExhibitScene — 展品 3D 展示页
 
@@ -494,7 +497,9 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 - 头像可拖动到屏幕任意位置，坐标持久化到 `PlayerPrefs`
 - 点击头像打开对话面板，角色切换时清空旧对话并显示新角色开场白
 - `AIChatManager` 将角色描述、说话风格、品类知识注入 System Prompt，实现身份化对话
-- 对话面板含打字机效果、考考我出题、思考中提示等交互
+- 对话面板含打字机效果、考考我出题、思考中提示（动态状态文字+进度条+计时器）等交互
+- **网络重试**：首次请求失败自动重试（超时翻倍，等待模型加载），解决 Ollama 冷启动问题
+- **思考状态指示器**：发送消息后显示「守艺人思考中 ··· (12s)」+ 红色进度条，状态分阶段更新（思考中→模型加载中重试→收到回复）
 - **会话历史管理**：新建会话（保存当前→清空→显示新开场白）、历史会话（浏览/恢复/删除），持久化到 `persistentDataPath/chat_sessions.json`，最多保留20条
 
 ### 7.7 坑与经验

@@ -20,11 +20,17 @@ public class AIChatClient : MonoBehaviour
     }
 
     /// <summary>
-    /// 发送对话请求（协程方式）
+    /// 发送对话请求（协程方式，首次失败自动重试一次）
     /// </summary>
-    /// <param name="messages">消息列表</param>
-    /// <param name="onComplete">完成回调（成功返回内容，失败返回null）</param>
     public void SendChat(ChatMessage[] messages, Action<string> onComplete)
+    {
+        SendChat(messages, onComplete, null);
+    }
+
+    /// <summary>
+    /// 发送对话请求（带状态回调）
+    /// </summary>
+    public void SendChat(ChatMessage[] messages, Action<string> onComplete, Action<string> onStatus)
     {
         if (config == null)
         {
@@ -33,7 +39,7 @@ public class AIChatClient : MonoBehaviour
             return;
         }
 
-        StartCoroutine(SendChatCoroutine(messages, onComplete));
+        StartCoroutine(SendChatWithRetry(messages, onComplete, onStatus));
     }
 
     /// <summary>
@@ -46,22 +52,42 @@ public class AIChatClient : MonoBehaviour
             new ChatMessage { role = "user", content = "你好" }
         };
 
-        StartCoroutine(SendChatCoroutine(testMessages, (response) =>
+        StartCoroutine(SendChatWithRetry(testMessages, (response) =>
         {
             if (response != null)
-            {
                 onResult?.Invoke(true, "连接成功");
-            }
             else
-            {
                 onResult?.Invoke(false, "连接失败，请检查API地址和模型名");
-            }
-        }));
+        }, null));
     }
 
-    private IEnumerator SendChatCoroutine(ChatMessage[] messages, Action<string> onComplete)
+    private IEnumerator SendChatWithRetry(ChatMessage[] messages, Action<string> onComplete, Action<string> onStatus)
     {
-        // 构建请求体
+        string result = null;
+        bool success = false;
+
+        // 第一次尝试
+        yield return StartCoroutine(SendChatOnce(messages, config.timeoutSeconds, (r) => { result = r; success = r != null; }));
+        if (success) { onComplete?.Invoke(result); yield break; }
+
+        // 首次失败 → 自动重试（超时翻倍，等待模型加载）
+        Debug.Log("[AIChatClient] 首次请求失败，等待3秒后重试（模型可能正在加载）...");
+        onStatus?.Invoke("AI模型加载中，正在重试...");
+        yield return new WaitForSeconds(3f);
+
+        int retryTimeout = Mathf.Max(config.timeoutSeconds * 2, 60);
+        yield return StartCoroutine(SendChatOnce(messages, retryTimeout, (r) => { result = r; success = r != null; }));
+
+        if (success)
+            onStatus?.Invoke("收到回复，正在生成...");
+        else
+            onStatus?.Invoke("连接失败");
+
+        onComplete?.Invoke(result);
+    }
+
+    private IEnumerator SendChatOnce(ChatMessage[] messages, int timeout, Action<string> onComplete)
+    {
         var requestBody = new ChatRequest
         {
             model = config.modelName,
@@ -71,21 +97,19 @@ public class AIChatClient : MonoBehaviour
         };
 
         string jsonBody = JsonUtility.ToJson(requestBody);
-
         byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
 
         using (UnityWebRequest request = new UnityWebRequest(config.apiUrl, "POST"))
         {
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
-            request.timeout = config.timeoutSeconds;
+            request.timeout = timeout;
 
-            // 设置请求头
-            request.SetRequestHeader("Content-Type", "application/json; charset=utf-8");
             if (!string.IsNullOrEmpty(config.apiKey))
             {
                 request.SetRequestHeader("Authorization", "Bearer " + config.apiKey);
             }
+            request.SetRequestHeader("Content-Type", "application/json; charset=utf-8");
 
             yield return request.SendWebRequest();
 
@@ -99,19 +123,13 @@ public class AIChatClient : MonoBehaviour
             {
                 string errorMsg = request.error ?? "未知错误";
                 if (request.responseCode == 0)
-                {
-                    errorMsg = "无法连接到API服务器，请确认Ollama或云服务已启动";
-                }
+                    errorMsg = "无法连接到API服务器";
                 else if (request.responseCode == 401)
-                {
                     errorMsg = "API密钥无效";
-                }
                 else if (request.responseCode == 404)
-                {
                     errorMsg = "API地址不正确或模型不存在";
-                }
 
-                Debug.LogWarning($"[AIChatClient] 请求失败: {errorMsg} (Code: {request.responseCode})");
+                Debug.LogWarning($"[AIChatClient] 请求失败: {errorMsg} (Code: {request.responseCode}, Timeout: {timeout}s)");
                 onComplete?.Invoke(null);
             }
         }
@@ -140,19 +158,13 @@ public class AIChatClient : MonoBehaviour
 
 #region 数据结构
 
-/// <summary>
-/// 对话消息
-/// </summary>
 [Serializable]
 public class ChatMessage
 {
-    public string role;     // "system" / "user" / "assistant"
+    public string role;
     public string content;
 }
 
-/// <summary>
-/// 对话请求体（OpenAI兼容格式）
-/// </summary>
 [Serializable]
 public class ChatRequest
 {
@@ -162,9 +174,6 @@ public class ChatRequest
     public float temperature;
 }
 
-/// <summary>
-/// 对话响应体（OpenAI兼容格式）
-/// </summary>
 [Serializable]
 public class ChatResponse
 {
