@@ -1,10 +1,10 @@
 {
-  "unity_port": 1039,
-  "stream_port": 8030,
+  "unity_port": 11034,
+  "stream_port": 11036,
   "created_date": "2026-06-07T06:03:20.3420789Z",
   "project_path": "D:/Improve/Project/UnityProj/FeiYi-Gallery/Assets",
   "reloading": false,
   "reason": "ready",
   "seq": 1,
-  "last_heartbeat": "2026-06-19T13:23:50.0472859Z"
+  "last_heartbeat": "2026-06-23T11:44:11.0966766Z"
 }
