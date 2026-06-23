@@ -433,11 +433,9 @@ public class MainPanel : UIFrame
         Stretch(overlay);
         var overlayImg = overlay.AddComponent<Image>();
         overlayImg.color = new Color(0, 0, 0, 0.85f);
-        // 遮罩层不拦截点击，只有 X 按钮可关闭
         overlayImg.raycastTarget = false;
         overlay.SetActive(false);
 
-        // 面板 — Image 必须拦截 raycast，否则点击会穿透到遮罩层
         var panel = NewUI("Panel", overlay.transform);
         var pr = panel.GetComponent<RectTransform>();
         pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
@@ -453,7 +451,7 @@ public class MainPanel : UIFrame
         tlr.pivot = new Vector2(0.5f, 1f); tlr.sizeDelta = new Vector2(0, 3);
         topLine.AddComponent<Image>().color = ZhuRed;
 
-        // 标题行容器（标题 + X 按钮同行）
+        // 标题行
         var titleRow = NewUI("TitleRow", panel.transform);
         var trr = titleRow.GetComponent<RectTransform>();
         trr.anchorMin = new Vector2(0, 1); trr.anchorMax = new Vector2(1, 1);
@@ -461,7 +459,6 @@ public class MainPanel : UIFrame
         trr.sizeDelta = new Vector2(0, 44);
         trr.anchoredPosition = Vector2.zero;
 
-        // 标题文字
         var titleObj = NewUI("Title", titleRow.transform);
         var tr = titleObj.GetComponent<RectTransform>();
         tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one;
@@ -469,7 +466,6 @@ public class MainPanel : UIFrame
         var tt = titleObj.AddComponent<Text>();
         tt.font = Font(); tt.text = "系统设置"; tt.fontSize = 24; tt.color = ZhuRed; tt.alignment = TextAnchor.MiddleCenter;
 
-        // 关闭按钮 — 右上角（与帮助面板一致）
         var xObj = NewUI("X", panel.transform);
         var xr = xObj.GetComponent<RectTransform>();
         xr.anchorMin = xr.anchorMax = new Vector2(1, 1);
@@ -482,68 +478,126 @@ public class MainPanel : UIFrame
         var xt = xTxt.AddComponent<Text>();
         xt.font = Font(); xt.text = "X"; xt.fontSize = 16; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
 
-        // ── 内容区（ScrollRect 可滚动） ──
-        var scrollView = NewUI("SettingsScroll", panel.transform);
-        var svR = scrollView.GetComponent<RectTransform>();
-        svR.anchorMin = Vector2.zero; svR.anchorMax = new Vector2(1, 1);
-        svR.offsetMin = new Vector2(0, 20); svR.offsetMax = new Vector2(0, -55);
+        // ── Tab 栏 ──
+        string[] tabLabels = { "音量亮度", "主题", "头像", "密码", "AI设置" };
+        var tabContainer = NewUI("TabBar", panel.transform);
+        var tbcR = tabContainer.GetComponent<RectTransform>();
+        tbcR.anchorMin = new Vector2(0, 1); tbcR.anchorMax = new Vector2(1, 1);
+        tbcR.pivot = new Vector2(0.5f, 1f);
+        tbcR.sizeDelta = new Vector2(0, 40);
+        tbcR.anchoredPosition = new Vector2(0, -46);
 
-        var viewport = NewUI("Viewport", scrollView.transform);
-        Stretch(viewport);
-        var vpImg = viewport.AddComponent<Image>();
-        vpImg.color = Color.white; vpImg.raycastTarget = true;
-        viewport.AddComponent<Mask>().showMaskGraphic = false;
+        var tabBtns = new Button[tabLabels.Length];
+        var tabHighlight = new Image[tabLabels.Length];
+        for (int i = 0; i < tabLabels.Length; i++)
+        {
+            var tab = NewUI($"Tab_{i}", tabContainer.transform);
+            var tR = tab.GetComponent<RectTransform>();
+            float cellW = 1f / tabLabels.Length;
+            tR.anchorMin = new Vector2(i * cellW, 0);
+            tR.anchorMax = new Vector2((i + 1) * cellW, 1);
+            tR.offsetMin = tR.offsetMax = Vector2.zero;
 
-        var content = NewUI("Content", viewport.transform);
-        var cr = content.GetComponent<RectTransform>();
-        cr.anchorMin = new Vector2(0, 1); cr.anchorMax = new Vector2(1, 1);
-        cr.pivot = new Vector2(0.5f, 1f);
-        cr.offsetMin = new Vector2(20, 0); cr.offsetMax = new Vector2(-20, 0);
+            tab.AddComponent<Image>().color = new Color(0, 0, 0, 0.05f);
+            tabBtns[i] = tab.AddComponent<Button>();
 
-        var svScroll = scrollView.AddComponent<ScrollRect>();
-        svScroll.content = cr;
-        svScroll.viewport = viewport.GetComponent<RectTransform>();
-        svScroll.horizontal = false;
-        svScroll.vertical = true;
-        svScroll.movementType = ScrollRect.MovementType.Clamped;
-        svScroll.inertia = true;
+            var tabTxt = NewUI("T", tab.transform); Stretch(tabTxt);
+            var tT = tabTxt.AddComponent<Text>();
+            tT.font = Font(); tT.text = tabLabels[i]; tT.fontSize = 14; tT.color = InkBlack; tT.alignment = TextAnchor.MiddleCenter;
 
-        // 添加可见滚动条 + 滚轮加速
-        AddVerticalScrollbar(panel.transform, svScroll);
+            var hl = NewUI("HL", tab.transform);
+            var hlR = hl.GetComponent<RectTransform>();
+            hlR.anchorMin = new Vector2(0, 0); hlR.anchorMax = new Vector2(1, 0);
+            hlR.pivot = new Vector2(0.5f, 0f);
+            hlR.sizeDelta = new Vector2(0, 3);
+            tabHighlight[i] = hl.AddComponent<Image>();
+            tabHighlight[i].color = ZhuRed;
+            tabHighlight[i].raycastTarget = false;
+            tabHighlight[i].enabled = (i == 0);
+        }
 
-        float y = -10f;
+        // ── Tab 页面容器 ──
+        var pagesContainer = NewUI("Pages", panel.transform);
+        var pcR = pagesContainer.GetComponent<RectTransform>();
+        pcR.anchorMin = Vector2.zero; pcR.anchorMax = Vector2.one;
+        pcR.offsetMin = Vector2.zero; pcR.offsetMax = new Vector2(0, -90);
 
-        // ── 音量 & 亮度（紧凑双行） ──
-        y = AddSettingSectionTitle(content.transform, "音量 / 亮度", y);
-        y = AddVolumeSlider(content.transform, y);
-        y = AddBrightnessSlider(content.transform, y);
+        var tabPages = new GameObject[tabLabels.Length];
 
-        y += 12f;
+        // 创建每个 Tab 的 ScrollRect 页面
+        for (int i = 0; i < tabLabels.Length; i++)
+        {
+            var pageObj = NewUI($"Page_{i}", pagesContainer.transform);
+            Stretch(pageObj);
+            var pageImg = pageObj.AddComponent<Image>();
+            pageImg.color = new Color(0, 0, 0, 0);
+            pageImg.raycastTarget = false;
 
-        // ── 主题切换 ──
-        y = AddSettingSectionTitle(content.transform, "主题风格", y);
-        y = AddThemeSelector(content.transform, y);
+            var viewport = NewUI("Viewport", pageObj.transform);
+            Stretch(viewport);
+            var vpImg = viewport.AddComponent<Image>();
+            vpImg.color = new Color(1, 1, 1, 0.01f); vpImg.raycastTarget = true;
+            viewport.AddComponent<Mask>().showMaskGraphic = false;
 
-        y += 20f;
+            var content = NewUI("Content", viewport.transform);
+            var cr = content.GetComponent<RectTransform>();
+            cr.anchorMin = new Vector2(0, 1); cr.anchorMax = new Vector2(1, 1);
+            cr.pivot = new Vector2(0.5f, 1f);
+            cr.offsetMin = new Vector2(20, 0); cr.offsetMax = new Vector2(-20, 0);
 
-        // ── 头像编辑 ──
-        y = AddSettingSectionTitle(content.transform, "头像选择", y);
-        y = AddAvatarSelector(content.transform, y);
+            var scroll = pageObj.AddComponent<ScrollRect>();
+            scroll.content = cr;
+            scroll.viewport = viewport.GetComponent<RectTransform>();
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.inertia = true;
+            AddVerticalScrollbar(pageObj.transform, scroll);
 
-        y += 20f;
+            tabPages[i] = pageObj;
+            pageObj.SetActive(i == 0);
 
-        // ── 修改密码 ──
-        y = AddSettingSectionTitle(content.transform, "修改密码", y);
-        y = AddPasswordChangeSection(content.transform, y);
+            float y = -10f;
+            switch (i)
+            {
+                case 0: // 音量亮度
+                    y = AddSettingSectionTitle(content.transform, "音量 / 亮度", y);
+                    y = AddVolumeSlider(content.transform, y);
+                    y = AddBrightnessSlider(content.transform, y);
+                    break;
+                case 1: // 主题
+                    y = AddSettingSectionTitle(content.transform, "主题风格", y);
+                    y = AddThemeSelector(content.transform, y);
+                    break;
+                case 2: // 头像
+                    y = AddSettingSectionTitle(content.transform, "头像选择", y);
+                    y = AddAvatarSelector(content.transform, y);
+                    break;
+                case 3: // 密码
+                    y = AddSettingSectionTitle(content.transform, "修改密码", y);
+                    y = AddPasswordChangeSection(content.transform, y);
+                    break;
+                case 4: // AI设置
+                    y = AddSettingSectionTitle(content.transform, "AI对话设置", y);
+                    y = AddAISettingsSection(content.transform, y);
+                    break;
+            }
+            cr.sizeDelta = new Vector2(0, -y + 20);
+        }
 
-        y += 12f;
-
-        // ── AI对话设置 ──
-        y = AddSettingSectionTitle(content.transform, "AI对话设置", y);
-        y = AddAISettingsSection(content.transform, y);
-
-        // 手动设置Content高度（不使用ContentSizeFitter，因为子元素使用手动定位）
-        cr.sizeDelta = new Vector2(0, -y + 20);
+        // Tab 切换逻辑
+        for (int i = 0; i < tabLabels.Length; i++)
+        {
+            int idx = i;
+            tabBtns[i].onClick.AddListener(() =>
+            {
+                for (int j = 0; j < tabPages.Length; j++)
+                {
+                    tabPages[j].SetActive(j == idx);
+                    tabHighlight[j].enabled = (j == idx);
+                }
+            });
+        }
 
         return overlay;
     }
@@ -845,7 +899,7 @@ public class MainPanel : UIFrame
     private void RefreshThemeHighlight(int selectedIdx)
     {
         if (settingsPanel == null) return;
-        var themeRow = settingsPanel.transform.Find("Panel/Content/ThemeRow");
+        var themeRow = settingsPanel.transform.Find("Panel/Pages/Page_1/Viewport/Content/ThemeRow");
         if (themeRow == null) return;
 
         for (int i = 0; i < ThemeNames.Length; i++)
@@ -886,7 +940,7 @@ public class MainPanel : UIFrame
     private void RefreshAvatarHighlight(int selectedIdx)
     {
         if (settingsPanel == null) return;
-        var avatarRow = settingsPanel.transform.Find("Panel/Content/AvatarRow");
+        var avatarRow = settingsPanel.transform.Find("Panel/Pages/Page_2/Viewport/Content/AvatarRow");
         if (avatarRow == null) return;
 
         for (int i = 0; i < AvatarColors.Length; i++)
