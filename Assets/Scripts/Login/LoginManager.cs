@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using System.Collections;
 
 /// <summary>
@@ -163,12 +164,99 @@ public class LoginManager : UIFrame
 
                 ShowMsg("登录成功！", successColor);
                 GameManager.Instance.Login(u);
-                StartCoroutine(FadeOut(rootCanvasGroup, 0.6f, () =>
-                    SceneLoader.Instance.LoadScene(SceneNames.Start)));
+                StartCoroutine(LoginProgress());
             }
             else ShowMsg("密码错误", errorColor);
         }
         catch (System.Exception e) { Debug.LogError($"Login error: {e.Message}\n{e.StackTrace}"); }
+    }
+
+    private IEnumerator LoginProgress()
+    {
+        // 创建加载遮罩
+        var overlay = NewUI("LoadingOverlay", rootT);
+        Stretch(overlay);
+        var ovImg = overlay.AddComponent<Image>();
+        ovImg.color = new Color(0.08f, 0.08f, 0.08f, 0.95f);
+        ovImg.raycastTarget = true;
+
+        // 印章
+        AddSealLogo("Logo", overlay.transform, new Vector2(0, 60), 60, "非遗", 24);
+
+        // 提示文字
+        var tip = NewUI("Tip", overlay.transform);
+        var tr = tip.GetComponent<RectTransform>();
+        tr.anchorMin = tr.anchorMax = new Vector2(0.5f, 0.5f);
+        tr.sizeDelta = new Vector2(300, 30);
+        tr.anchoredPosition = new Vector2(0, 10);
+        var tipText = tip.AddComponent<Text>();
+        tipText.font = Font(); tipText.fontSize = 16; tipText.color = GoldColor; tipText.alignment = TextAnchor.MiddleCenter;
+
+        // 进度条背景
+        var barBg = NewUI("BarBg", overlay.transform);
+        var bgR = barBg.GetComponent<RectTransform>();
+        bgR.anchorMin = bgR.anchorMax = new Vector2(0.5f, 0.5f);
+        bgR.sizeDelta = new Vector2(320, 12);
+        bgR.anchoredPosition = new Vector2(0, -30);
+        barBg.AddComponent<Image>().color = new Color(0.2f, 0.2f, 0.2f);
+
+        // 进度条填充
+        var barFill = NewUI("BarFill", barBg.transform);
+        var fR = barFill.GetComponent<RectTransform>();
+        fR.anchorMin = new Vector2(0, 0); fR.anchorMax = new Vector2(0, 1);
+        fR.pivot = new Vector2(0, 0.5f);
+        fR.sizeDelta = new Vector2(0, 0);
+        fR.offsetMin = Vector2.zero; fR.offsetMax = Vector2.zero;
+        var fillImg = barFill.AddComponent<Image>();
+        fillImg.color = ZhuRed;
+
+        // 百分比文字
+        var pct = NewUI("Pct", overlay.transform);
+        var pR = pct.GetComponent<RectTransform>();
+        pR.anchorMin = pR.anchorMax = new Vector2(0.5f, 0.5f);
+        pR.sizeDelta = new Vector2(100, 24);
+        pR.anchoredPosition = new Vector2(0, -55);
+        var pctText = pct.AddComponent<Text>();
+        pctText.font = Font(); pctText.fontSize = 14; pctText.color = GoldColor; pctText.alignment = TextAnchor.MiddleCenter;
+
+        // 淡入遮罩
+        var cg = overlay.AddComponent<CanvasGroup>();
+        float fi = 0;
+        while (fi < 0.3f)
+        {
+            fi += Time.deltaTime;
+            cg.alpha = Mathf.Clamp01(fi / 0.3f);
+            yield return null;
+        }
+        cg.alpha = 1f;
+
+        // 异步加载场景
+        var op = SceneManager.LoadSceneAsync(SceneNames.Start);
+        string[] tips = { "正在加载非遗世界...", "汇聚千年匠心...", "展开历史画卷...", "即将启程..." };
+        int tipIdx = 0;
+        tipText.text = tips[0];
+
+        while (op != null && !op.isDone)
+        {
+            float p = Mathf.Clamp01(op.progress / 0.9f);
+            // 宽度从 0 到 320
+            fR.sizeDelta = new Vector2(320 * p, 0);
+            pctText.text = Mathf.RoundToInt(p * 100) + "%";
+            int newIdx = Mathf.FloorToInt(p * tips.Length);
+            if (newIdx != tipIdx && newIdx < tips.Length)
+            {
+                tipIdx = newIdx;
+                tipText.text = tips[tipIdx];
+            }
+            yield return null;
+        }
+
+        // 确保满进度
+        fR.sizeDelta = new Vector2(320, 0);
+        pctText.text = "100%";
+        tipText.text = "加载完成！";
+
+        yield return new WaitForSeconds(0.3f);
     }
 
     private void OnRegisterClicked()
