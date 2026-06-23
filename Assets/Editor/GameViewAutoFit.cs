@@ -34,19 +34,22 @@ public static class GameViewAutoFit
         if (za == null) return;
         var zaType = za.GetType();
 
-        SetFloat(zaType, za, "m_HScaleMin", 0.05f);
-        SetFloat(zaType, za, "m_VScaleMin", 0.05f);
+        // 允许缩放范围 0.3x ~ 1.2x，用户可自由滑动
+        SetFloat(zaType, za, "m_HScaleMin", 0.3f);
+        SetFloat(zaType, za, "m_VScaleMin", 0.3f);
+        SetFloat(zaType, za, "m_HScaleMax", 1.2f);
+        SetFloat(zaType, za, "m_VScaleMax", 1.2f);
         SetBool(zaType, za, "m_ScaleWithWindow", true);
 
-        // 缩放自适应窗口大小（不裁切），不放大内容
+        // 仅当缩放超过 1.2x 时才拉回（防止旧的高缩放状态卡住）
         var scale = (Vector2)zaType.GetField("m_Scale", flags).GetValue(za);
-        var drawArea = (Rect)zaType.GetField("m_DrawArea", flags).GetValue(za);
-        var targetSize = (Vector2)gvType.GetProperty("targetRenderSize", flags).GetValue(gv, null);
-        if (targetSize.x > 0 && targetSize.y > 0 && drawArea.width > 0 && drawArea.height > 0)
+        if (scale.x > 1.2f)
         {
-            float fit = Mathf.Min(drawArea.width / targetSize.x, drawArea.height / targetSize.y);
-            if (Mathf.Abs(scale.x - fit) > 0.02f)
+            var drawArea = (Rect)zaType.GetField("m_DrawArea", flags).GetValue(za);
+            var targetSize = (Vector2)gvType.GetProperty("targetRenderSize", flags).GetValue(gv, null);
+            if (targetSize.x > 0 && targetSize.y > 0 && drawArea.width > 0 && drawArea.height > 0)
             {
+                float fit = Mathf.Min(drawArea.width / targetSize.x, drawArea.height / targetSize.y);
                 zaType.GetField("m_Scale", flags).SetValue(za, new Vector2(fit, fit));
             }
         }
