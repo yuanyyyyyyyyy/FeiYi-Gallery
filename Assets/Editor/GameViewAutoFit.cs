@@ -34,16 +34,16 @@ public static class GameViewAutoFit
         if (za == null) return;
         var zaType = za.GetType();
 
-        // 允许缩放范围 0.3x ~ 1.2x，用户可自由滑动
+        // 允许缩放范围 0.3x ~ 1.3x，用户可自由滑动
         SetFloat(zaType, za, "m_HScaleMin", 0.3f);
         SetFloat(zaType, za, "m_VScaleMin", 0.3f);
-        SetFloat(zaType, za, "m_HScaleMax", 1.2f);
-        SetFloat(zaType, za, "m_VScaleMax", 1.2f);
+        SetFloat(zaType, za, "m_HScaleMax", 1.3f);
+        SetFloat(zaType, za, "m_VScaleMax", 1.3f);
         SetBool(zaType, za, "m_ScaleWithWindow", true);
 
-        // 仅当缩放超过 1.2x 时才拉回（防止旧的高缩放状态卡住）
+        // 仅当缩放超过 1.3x 时才拉回（防止旧的高缩放状态卡住）
         var scale = (Vector2)zaType.GetField("m_Scale", flags).GetValue(za);
-        if (scale.x > 1.2f)
+        if (scale.x > 1.3f)
         {
             var drawArea = (Rect)zaType.GetField("m_DrawArea", flags).GetValue(za);
             var targetSize = (Vector2)gvType.GetProperty("targetRenderSize", flags).GetValue(gv, null);
