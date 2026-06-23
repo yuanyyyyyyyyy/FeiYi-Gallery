@@ -125,3 +125,13 @@ TestResults/
 # Terrain assets (auto-generated)
 # ───────────────────────────────────────
 [Aa]ssets/Terrain/
+
+# ───────────────────────────────────────
+# Codely CLI config (contains local connection state)
+# ───────────────────────────────────────
+.com-unity-codely.json
+
+# ───────────────────────────────────────
+# Backpack runtime data (user-specific, generated at runtime)
+# ───────────────────────────────────────
+[Aa]ssets/StreamingAssets/Backpack/

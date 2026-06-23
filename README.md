@@ -250,10 +250,10 @@ Canvas (ScreenSpaceOverlay)
     ├── "开始探索" 按钮（带脉冲动画）
     ├── "使用引导" 按钮
     ├── 欢迎语
-    └── 引导弹窗（6步使用指南）
+    └── 引导弹窗（8步使用指南，含AI对话与设置说明）
 ```
 
-**首次使用引导**：检测 `PlayerPrefs.HasKey("HasSeenGuide")`，首次启动自动弹出引导弹窗，后续可手动点击"使用引导"查看。
+**首次使用引导**：检测 `PlayerPrefs.HasKey("HasSeenGuide")`，首次启动自动弹出引导弹窗（8步：选择品类→浏览展品→3D交互→查看详情→问守艺人→收藏展品→管理背包→设置与个性化），后续可手动点击"使用引导"查看。
 
 ### 5.3 MainScene — 品类选择主页
 
@@ -281,7 +281,7 @@ Canvas (ScreenSpaceOverlay)
     ├── NavBar（背包/设置/帮助/退出，竹简风格）
     ├── 设置弹窗（Tab分页：音量亮度/主题/头像/密码/AI设置，每页独立滚动）
     ├── 帮助弹窗（Tab分页：使用引导/常见问题/关于系统，每页独立滚动）
-    ├── 背包弹窗（收藏列表 + 搜索 + 品类筛选 + 删除）
+    ├── 背包弹窗（560×680大面板，收藏列表 + 搜索 + 品类筛选 + 滚轮滚动 + 删除）
     └── 退出确认对话框（确认/取消，Toast 提示"已安全退出"）
 ```
 
@@ -292,7 +292,7 @@ Canvas (ScreenSpaceOverlay)
 - **亮度调节**：拖动滑块调整半透明黑色遮罩层的 alpha（0~0.55），视觉上实现屏幕变暗/变亮
 - **AI测试连接**：持久进度条浮层，模拟连接进度，成功/失败视觉反馈
 - **退出确认**：点击退出弹出 `MakeConfirmDialog` 确认对话框，确认后 `ShowToast("已安全退出")`
-- **帮助弹窗**：Tab 分页（使用引导/常见问题/关于系统），引导步骤带编号印章卡片，FAQ带问号印章，关于系统展示版本信息
+- **帮助弹窗**：Tab 分页（使用引导8步/常见问题8条/关于系统），引导步骤带编号印章卡片，FAQ带问号印章，关于系统展示版本信息
 
 ### 5.4 ExhibitScene — 展品 3D 展示页
 
@@ -401,6 +401,7 @@ public class ExhibitData {
 | `LoginTime` | 上次登录时间 | "2026-06-10" |
 | `CurrentCategory` | 当前选择的品类 | "瓷器" |
 | `Backpack_{用户名}` | 收藏的展品ID列表 | "porcelain_01,instrument_01" |
+| `Backpack/{用户名}_backpack.json` | 背包JSON备份文件 | persistentDataPath 下 |
 | `Volume` | 音量设置 | 0.8 |
 | `Brightness` | 亮度设置 | 1.0 |
 | `ThemeStyle` | 主题风格 | "default"/"classic"/"minimal" |
@@ -420,6 +421,7 @@ public class ExhibitData {
 - 按品类筛选（全部/瓷器/剪纸/书法/民族乐器/刺绣/茶艺/皮影戏/扎染蜡染）
 - 搜索展品（实时过滤）
 - 删除收藏
+- 列表区域支持滚轮滚动 + 可见滚动条（ScrollRect + VerticalLayoutGroup + ContentSizeFitter）
 
 ---
 
@@ -527,6 +529,8 @@ private GameObject AddPart(PrimitiveType pt, GameObject parent,
 | 事件列表无法滚动 | 绝对定位超出屏幕不可滚动 | 改为 ScrollRect + VerticalLayoutGroup + ContentSizeFitter |
 | 事件详情印章标题重叠 | 印章 anchor 0.88 与标题 0.84 间距过小 | 印章上移至 0.92，标题下移至 0.74~0.82 |
 | 历史面板X按钮无响应 | EmptyHint 文字铺满面板且 raycastTarget=true 拦截点击 | 设置 `raycastTarget=false` |
+| 背包面板元素紧凑无滚动 | 复用 MakeOverlay(440×380) 太小，列表用锚点百分比定位会重叠 | 改为自建560×680大面板 + ScrollRect + LayoutGroup 固定行高 |
+| 登录按钮溢出底部红线 | 按钮 320×48 位置 -510 超出面板底部 | 缩小为 280×40，上移至 -440/-492，底部留出间距 |
 
 ---
 

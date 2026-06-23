@@ -121,18 +121,18 @@ public class LoginManager : UIFrame
         rememberPwdToggle.isOn = false;
 
         // 登录按钮
-        var loginBtn = AddBtn("LoginBtn", panel.transform, new Vector2(0, -445), new Vector2(320, 48), "登  录", ZhuRed);
+        var loginBtn = AddBtn("LoginBtn", panel.transform, new Vector2(0, -440), new Vector2(280, 40), "登  录", ZhuRed);
 
         // 注册按钮
-        var regBtn = AddBtn("RegBtn", panel.transform, new Vector2(0, -510), new Vector2(320, 48), "注  册", GoldColor);
+        var regBtn = AddBtn("RegBtn", panel.transform, new Vector2(0, -492), new Vector2(280, 40), "注  册", GoldColor);
 
         // 提示信息
         var msgObj = NewUI("Msg", panel.transform);
         var mr = msgObj.GetComponent<RectTransform>();
         mr.anchorMin = mr.anchorMax = new Vector2(0.5f, 1f);
         mr.pivot = new Vector2(0.5f, 1f);
-        mr.sizeDelta = new Vector2(360, 26);
-        mr.anchoredPosition = new Vector2(0, -565);
+        mr.sizeDelta = new Vector2(360, 18);
+        mr.anchoredPosition = new Vector2(0, -536);
         messageText = msgObj.AddComponent<Text>();
         messageText.font = Font();
         messageText.fontSize = 15;

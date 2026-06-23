@@ -1673,33 +1673,64 @@ public class MainPanel : UIFrame
 
     private void CreateBackpackPanel()
     {
-        var items = BackpackManager.Instance.GetBackpackItems(GameManager.Instance.currentUser);
         if (backpackPanel != null) Destroy(backpackPanel);
 
-        backpackPanel = MakeOverlay(rootT, "我的背包", "", JadeGreen);
-        backpackPanel.SetActive(true);
+        // ── 自建大面板遮罩（比 MakeOverlay 的 440×380 更大）──
+        backpackPanel = NewUI("BackpackOverlay", rootT);
+        Stretch(backpackPanel);
+        var olImg = backpackPanel.AddComponent<Image>();
+        olImg.color = new Color(0, 0, 0, 0.85f);
+        olImg.raycastTarget = true;
 
-        var panel = backpackPanel.transform.Find("Panel");
-        var contentArea = panel.Find("Viewport/C");
-        if (contentArea == null) return;
+        var panel = NewUI("Panel", backpackPanel.transform);
+        var pr = panel.GetComponent<RectTransform>();
+        pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
+        pr.sizeDelta = new Vector2(560, Mathf.Min(680, Screen.height * 0.85f));
+        var panelImg = panel.AddComponent<Image>();
+        panelImg.color = XuanPaper;
+        panelImg.raycastTarget = true;
 
-        Object.Destroy(contentArea.GetComponent<Text>());
-        Object.Destroy(contentArea.GetComponent<ContentSizeFitter>());
+        // 顶部朱红装饰线
+        var topLine = NewUI("TopLine", panel.transform);
+        var tlr = topLine.GetComponent<RectTransform>();
+        tlr.anchorMin = new Vector2(0, 1); tlr.anchorMax = new Vector2(1, 1);
+        tlr.pivot = new Vector2(0.5f, 1f);
+        tlr.sizeDelta = new Vector2(0, 3);
+        var tlImg = topLine.AddComponent<Image>(); tlImg.color = JadeGreen; tlImg.raycastTarget = false;
 
-        // 重置 C 的 RectTransform：撑满 Viewport（否则高度为0，内容不可见）
-        var cRect = contentArea.GetComponent<RectTransform>();
-        cRect.anchorMin = Vector2.zero;
-        cRect.anchorMax = Vector2.one;
-        cRect.pivot = new Vector2(0.5f, 0.5f);
-        cRect.sizeDelta = Vector2.zero;
-        cRect.anchoredPosition = Vector2.zero;
+        // 标题
+        var tObj = NewUI("T", panel.transform);
+        var tr = tObj.GetComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0, 1); tr.anchorMax = new Vector2(1, 1);
+        tr.pivot = new Vector2(0.5f, 1f); tr.sizeDelta = new Vector2(0, 50);
+        var tl = tObj.AddComponent<Text>();
+        tl.font = Font(); tl.text = "我的背包"; tl.fontSize = 24; tl.color = JadeGreen; tl.alignment = TextAnchor.MiddleCenter;
+
+        // 关闭按钮
+        var xObj = NewUI("X", panel.transform);
+        var xr = xObj.GetComponent<RectTransform>();
+        xr.anchorMin = xr.anchorMax = new Vector2(1, 1);
+        xr.pivot = new Vector2(1, 1);
+        xr.sizeDelta = new Vector2(28, 28);
+        xr.anchoredPosition = new Vector2(-6, -6);
+        xObj.AddComponent<Image>().color = JadeGreen;
+        xObj.AddComponent<Button>().onClick.AddListener(() => backpackPanel.SetActive(false));
+        var xTxt = NewUI("XT", xObj.transform); Stretch(xTxt);
+        var xt = xTxt.AddComponent<Text>();
+        xt.font = Font(); xt.text = "X"; xt.fontSize = 16; xt.color = Color.white; xt.alignment = TextAnchor.MiddleCenter;
+
+        // ── 内容区域（标题下方）──
+        var body = NewUI("Body", panel.transform);
+        var bR = body.GetComponent<RectTransform>();
+        bR.anchorMin = Vector2.zero; bR.anchorMax = Vector2.one;
+        bR.offsetMin = new Vector2(20, 20); bR.offsetMax = new Vector2(-20, -60);
 
         // ── 搜索框 ──
-        var searchRow = NewUI("SearchRow", contentArea);
+        var searchRow = NewUI("SearchRow", body.transform);
         var srR = searchRow.GetComponent<RectTransform>();
         srR.anchorMin = new Vector2(0, 1); srR.anchorMax = new Vector2(1, 1);
         srR.pivot = new Vector2(0, 1f);
-        srR.sizeDelta = new Vector2(0, 36);
+        srR.sizeDelta = new Vector2(0, 44);
         srR.anchoredPosition = Vector2.zero;
 
         var searchBg = searchRow.AddComponent<Image>();
@@ -1709,21 +1740,21 @@ public class MainPanel : UIFrame
         var searchInputObj = NewUI("SearchInput", searchRow.transform);
         var siR = searchInputObj.GetComponent<RectTransform>();
         siR.anchorMin = Vector2.zero; siR.anchorMax = Vector2.one;
-        siR.offsetMin = new Vector2(8, 4); siR.offsetMax = new Vector2(-8, -4);
+        siR.offsetMin = new Vector2(10, 6); siR.offsetMax = new Vector2(-10, -6);
 
         var searchTxt = NewUI("Text", searchInputObj.transform);
         var stR = searchTxt.GetComponent<RectTransform>();
         stR.anchorMin = Vector2.zero; stR.anchorMax = Vector2.one;
         stR.offsetMin = new Vector2(8, 2); stR.offsetMax = new Vector2(-4, -2);
         var sTxt = searchTxt.AddComponent<Text>();
-        sTxt.font = Font(); sTxt.fontSize = 16; sTxt.color = InkBlack; sTxt.alignment = TextAnchor.MiddleLeft;
+        sTxt.font = Font(); sTxt.fontSize = 17; sTxt.color = InkBlack; sTxt.alignment = TextAnchor.MiddleLeft;
 
         var searchPh = NewUI("Placeholder", searchInputObj.transform);
         var spR = searchPh.GetComponent<RectTransform>();
         spR.anchorMin = Vector2.zero; spR.anchorMax = Vector2.one;
         spR.offsetMin = new Vector2(8, 2); spR.offsetMax = new Vector2(-4, -2);
         var sPh = searchPh.AddComponent<Text>();
-        sPh.font = Font(); sPh.text = "🔍 搜索展品..."; sPh.fontSize = 14;
+        sPh.font = Font(); sPh.text = "🔍 搜索展品..."; sPh.fontSize = 15;
         sPh.color = new Color(0.5f, 0.5f, 0.5f, 0.6f); sPh.alignment = TextAnchor.MiddleLeft;
 
         backpackSearchInput = searchInputObj.AddComponent<InputField>();
@@ -1732,17 +1763,17 @@ public class MainPanel : UIFrame
         backpackSearchInput.onValueChanged.AddListener(_ => RefreshBackpackList());
 
         // ── 品类筛选按钮行 ──
-        var filterRow = NewUI("FilterRow", contentArea);
+        var filterRow = NewUI("FilterRow", body.transform);
         var frR = filterRow.GetComponent<RectTransform>();
         frR.anchorMin = new Vector2(0, 1); frR.anchorMax = new Vector2(1, 1);
         frR.pivot = new Vector2(0, 1f);
-        frR.sizeDelta = new Vector2(0, 30);
-        frR.anchoredPosition = new Vector2(0, -38);
+        frR.sizeDelta = new Vector2(0, 38);
+        frR.anchoredPosition = new Vector2(0, -52);
 
         var flHlg = filterRow.AddComponent<HorizontalLayoutGroup>();
         flHlg.childAlignment = TextAnchor.MiddleCenter;
-        flHlg.spacing = 4;
-        flHlg.padding = new RectOffset(4, 4, 2, 2);
+        flHlg.spacing = 6;
+        flHlg.padding = new RectOffset(4, 4, 3, 3);
         flHlg.childForceExpandWidth = true;
         flHlg.childForceExpandHeight = false;
 
@@ -1751,7 +1782,7 @@ public class MainPanel : UIFrame
         {
             var fBtn = NewUI($"Filter_{i}", filterRow.transform);
             var le = fBtn.AddComponent<LayoutElement>();
-            le.preferredHeight = 26;
+            le.preferredHeight = 32;
             var fImg = fBtn.AddComponent<Image>();
             fImg.color = (i == 0) ? ZhuRed : new Color(0.85f, 0.82f, 0.75f);
             var fb = fBtn.AddComponent<Button>();
@@ -1759,15 +1790,53 @@ public class MainPanel : UIFrame
             fb.onClick.AddListener(() => { backpackCategoryFilter = idx; RefreshBackpackList(); });
             var fTxtObj = NewUI("T", fBtn.transform); Stretch(fTxtObj);
             var ft = fTxtObj.AddComponent<Text>();
-            ft.font = Font(); ft.text = filterNames[i]; ft.fontSize = 13;
+            ft.font = Font(); ft.text = filterNames[i]; ft.fontSize = 14;
             ft.color = (i == 0) ? Color.white : InkBlack; ft.alignment = TextAnchor.MiddleCenter;
         }
 
-        // ── 列表容器 ──
-        var listArea = NewUI("ListArea", contentArea);
+        // ── 列表区域（可滚动）──
+        var listArea = NewUI("ListArea", body.transform);
         var laR = listArea.GetComponent<RectTransform>();
-        laR.anchorMin = Vector2.zero; laR.anchorMax = new Vector2(1, 1);
-        laR.offsetMin = Vector2.zero; laR.offsetMax = new Vector2(0, -68);
+        laR.anchorMin = Vector2.zero; laR.anchorMax = Vector2.one;
+        laR.offsetMin = Vector2.zero; laR.offsetMax = new Vector2(0, -100);
+
+        // Viewport（裁剪）
+        var viewport = NewUI("Viewport", listArea.transform);
+        Stretch(viewport);
+        var vpImg = viewport.AddComponent<Image>();
+        vpImg.color = new Color(1, 1, 1, 0.01f);
+        vpImg.raycastTarget = true;
+        viewport.AddComponent<Mask>().showMaskGraphic = false;
+
+        // Content（自动撑高）
+        var content = NewUI("Content", viewport.transform);
+        var cR = content.GetComponent<RectTransform>();
+        cR.anchorMin = new Vector2(0, 1); cR.anchorMax = new Vector2(1, 1);
+        cR.pivot = new Vector2(0.5f, 1f);
+        cR.sizeDelta = new Vector2(0, 0);
+
+        var vlg = content.AddComponent<VerticalLayoutGroup>();
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        vlg.spacing = 6;
+        vlg.padding = new RectOffset(8, 8, 8, 8);
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+
+        var csf = content.AddComponent<ContentSizeFitter>();
+        csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var scrollRect = listArea.AddComponent<ScrollRect>();
+        scrollRect.content = cR;
+        scrollRect.viewport = viewport.GetComponent<RectTransform>();
+        scrollRect.horizontal = false;
+        scrollRect.vertical = true;
+        scrollRect.movementType = ScrollRect.MovementType.Clamped;
+        scrollRect.inertia = true;
+        scrollRect.decelerationRate = 0.1f;
+
+        AddVerticalScrollbar(listArea.transform, scrollRect);
+
+        backpackPanel.SetActive(true);
 
         // 初始渲染列表
         backpackCategoryFilter = -1;
@@ -1778,14 +1847,14 @@ public class MainPanel : UIFrame
     private void RefreshBackpackList()
     {
         if (backpackPanel == null) return;
-        var contentArea = backpackPanel.transform.Find("Panel/Viewport/C");
-        if (contentArea == null) return;
-        var listArea = contentArea.Find("ListArea");
-        if (listArea == null) return;
+        var content = backpackPanel.transform.Find("Panel/Body/ListArea/Viewport/Content");
+        if (content == null) return;
+        var body = backpackPanel.transform.Find("Panel/Body");
+        if (body == null) return;
 
         // 清空旧列表
-        for (int c = listArea.childCount - 1; c >= 0; c--)
-            Destroy(listArea.GetChild(c).gameObject);
+        for (int c = content.childCount - 1; c >= 0; c--)
+            Destroy(content.GetChild(c).gameObject);
 
         var allItems = BackpackManager.Instance.GetBackpackItems(GameManager.Instance.currentUser);
         string search = backpackSearchInput != null ? backpackSearchInput.text.Trim() : "";
@@ -1816,7 +1885,7 @@ public class MainPanel : UIFrame
         }
 
         // 更新筛选按钮样式
-        var filterRow = contentArea.Find("FilterRow");
+        var filterRow = body.Find("FilterRow");
         if (filterRow != null)
         {
             for (int i = 0; i < filterRow.childCount; i++)
@@ -1832,8 +1901,9 @@ public class MainPanel : UIFrame
 
         if (filtered.Count == 0)
         {
-            var empty = NewUI("Empty", listArea);
-            Stretch(empty);
+            var empty = NewUI("Empty", content);
+            var le = empty.AddComponent<LayoutElement>();
+            le.preferredHeight = 80;
             var et = empty.AddComponent<Text>();
             et.font = Font(); et.text = string.IsNullOrEmpty(search) && backpackCategoryFilter < 0
                 ? "暂无收藏展品\n浏览展品时点击「收藏」即可添加到背包"
@@ -1842,30 +1912,28 @@ public class MainPanel : UIFrame
             return;
         }
 
-        float rowH = 0.12f;
         for (int i = 0; i < filtered.Count; i++)
         {
             string id = filtered[i];
             var data = GameManager.Instance.GetExhibit(id);
             string label = data != null ? $"{data.category} · {data.name}" : id;
 
-            var row = NewUI($"Item_{i}", listArea);
-            var rr = row.GetComponent<RectTransform>();
-            rr.anchorMin = new Vector2(0, 1f - (i + 1) * rowH);
-            rr.anchorMax = new Vector2(1f, 1f - i * rowH);
-            rr.offsetMin = rr.offsetMax = Vector2.zero;
-            var ri = row.AddComponent<Image>(); ri.color = i % 2 == 0 ? new Color(0.95f, 0.93f, 0.88f) : XuanPaper; ri.raycastTarget = false;
+            var row = NewUI($"Item_{i}", content);
+            var le = row.AddComponent<LayoutElement>();
+            le.preferredHeight = 52;
+            var ri = row.AddComponent<Image>();
+            ri.color = i % 2 == 0 ? new Color(0.95f, 0.93f, 0.88f) : XuanPaper; ri.raycastTarget = false;
 
             var nameObj = NewUI("Name", row.transform);
             var nr = nameObj.GetComponent<RectTransform>();
-            nr.anchorMin = Vector2.zero; nr.anchorMax = new Vector2(0.7f, 1f);
-            nr.offsetMin = new Vector2(10, 0); nr.offsetMax = Vector2.zero;
+            nr.anchorMin = Vector2.zero; nr.anchorMax = new Vector2(0.68f, 1f);
+            nr.offsetMin = new Vector2(12, 0); nr.offsetMax = Vector2.zero;
             var nt = nameObj.AddComponent<Text>();
-            nt.font = Font(); nt.text = $"• {label}"; nt.fontSize = 16; nt.color = InkBlack; nt.alignment = TextAnchor.MiddleLeft;
+            nt.font = Font(); nt.text = $"• {label}"; nt.fontSize = 17; nt.color = InkBlack; nt.alignment = TextAnchor.MiddleLeft;
 
             var del = NewUI("Del", row.transform);
             var dr = del.GetComponent<RectTransform>();
-            dr.anchorMin = new Vector2(0.75f, 0.1f); dr.anchorMax = new Vector2(0.95f, 0.9f);
+            dr.anchorMin = new Vector2(0.72f, 0.15f); dr.anchorMax = new Vector2(0.96f, 0.85f);
             dr.offsetMin = dr.offsetMax = Vector2.zero;
             del.AddComponent<Image>().color = ZhuRed;
             var db = del.AddComponent<Button>();
@@ -1873,7 +1941,7 @@ public class MainPanel : UIFrame
             db.onClick.AddListener(() => OnDeleteFromBackpack(eid));
             var dt = NewUI("DT", del.transform); Stretch(dt);
             var dtt = dt.AddComponent<Text>();
-            dtt.font = Font(); dtt.text = "删除"; dtt.fontSize = 14; dtt.color = Color.white; dtt.alignment = TextAnchor.MiddleCenter;
+            dtt.font = Font(); dtt.text = "删除"; dtt.fontSize = 15; dtt.color = Color.white; dtt.alignment = TextAnchor.MiddleCenter;
         }
     }
 
