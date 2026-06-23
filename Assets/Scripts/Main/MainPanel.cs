@@ -776,10 +776,10 @@ public class MainPanel : UIFrame
     }
 
     private static readonly string[] ThemeNames = { "default", "classic", "minimal" };
-    private static readonly string[] ThemeLabels = { "青瓷", "水墨", "简约" };
+    private static readonly string[] ThemeLabels = { "默认", "古典", "简约" };
     private static readonly Color[] ThemePreviewColors = {
-        new Color(0.949f, 0.941f, 0.914f),  // 霁白
-        new Color(0.176f, 0.176f, 0.176f),  // 焦墨
+        new Color(0.96f, 0.90f, 0.78f),  // 宣纸白
+        new Color(0.22f, 0.17f, 0.12f),  // 深褐
         new Color(0.97f, 0.97f, 0.97f),  // 浅灰
     };
 
@@ -810,7 +810,7 @@ public class MainPanel : UIFrame
             var tObj = NewUI("T", btn.transform); Stretch(tObj);
             var t = tObj.AddComponent<Text>();
             t.font = Font(); t.text = ThemeLabels[i]; t.fontSize = 16;
-            t.color = i == 1 ? GoldColor : InkBlack;
+            t.color = i == 1 ? new Color(0.90f, 0.72f, 0.30f) : InkBlack;
             t.alignment = TextAnchor.MiddleCenter;
 
             // 选中高亮边框
