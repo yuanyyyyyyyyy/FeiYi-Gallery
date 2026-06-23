@@ -39,14 +39,17 @@ public static class GameViewAutoFit
         SetBool(zaType, za, "m_ScaleWithWindow", true);
 
         var scale = (Vector2)zaType.GetField("m_Scale", flags).GetValue(za);
-        if (scale.x > 1.05f)
+        var drawArea = (Rect)zaType.GetField("m_DrawArea", flags).GetValue(za);
+        var targetSize = (Vector2)gvType.GetProperty("targetRenderSize", flags).GetValue(gv, null);
+        if (targetSize.x > 0 && targetSize.y > 0 && drawArea.width > 0 && drawArea.height > 0)
         {
-            var drawArea = (Rect)zaType.GetField("m_DrawArea", flags).GetValue(za);
-            var targetSize = (Vector2)gvType.GetProperty("targetRenderSize", flags).GetValue(gv, null);
-            if (targetSize.x > 0 && targetSize.y > 0 && drawArea.width > 0 && drawArea.height > 0)
+            float fitW = drawArea.width / targetSize.x;
+            float fitH = drawArea.height / targetSize.y;
+            // 在严格 fit 基础上放大 5%，但不超过高度填满值，避免裁切 header/footer
+            float target = Mathf.Min(fitW * 1.05f, fitH);
+            if (Mathf.Abs(scale.x - target) > 0.02f)
             {
-                float fit = Mathf.Min(drawArea.width / targetSize.x, drawArea.height / targetSize.y);
-                zaType.GetField("m_Scale", flags).SetValue(za, new Vector2(fit, fit));
+                zaType.GetField("m_Scale", flags).SetValue(za, new Vector2(target, target));
             }
         }
     }
