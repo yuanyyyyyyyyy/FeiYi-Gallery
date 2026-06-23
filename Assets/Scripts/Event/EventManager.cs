@@ -190,7 +190,9 @@ public class EventManager : UIFrame
         inImg.color = XuanPaper;
         inImg.raycastTarget = false;
 
-        AddSealIcon("Icon", inner.transform, new Vector2(0.5f, 0.72f), 24, CategoryIcons[idx], 22);
+        // 印章图标 — 使用品类对应颜色
+        var catIcon = AddSealIcon("Icon", inner.transform, new Vector2(0.5f, 0.72f), 24, CategoryIcons[idx], 22);
+        catIcon.GetComponent<Image>().color = CategoryColors[idx];
 
         var nameObj = NewUI("Name", inner.transform);
         var nr = nameObj.GetComponent<RectTransform>();

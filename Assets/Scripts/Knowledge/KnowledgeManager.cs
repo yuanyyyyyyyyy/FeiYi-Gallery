@@ -193,8 +193,9 @@ public class KnowledgeManager : UIFrame
         inImg.color = XuanPaper;
         inImg.raycastTarget = false;
 
-        // 印章图标
-        AddSealIcon("Icon", inner.transform, new Vector2(0.5f, 0.72f), 24, CategoryIcons[idx], 22);
+        // 印章图标 — 使用品类对应颜色
+        var catIcon = AddSealIcon("Icon", inner.transform, new Vector2(0.5f, 0.72f), 24, CategoryIcons[idx], 22);
+        catIcon.GetComponent<Image>().color = CategoryColors[idx];
 
         // 品类名
         var nameObj = NewUI("Name", inner.transform);
