@@ -1150,6 +1150,8 @@ public class MainPanel : UIFrame
         return y - 40f;
     }
 
+    private GameObject aiTestOverlay;
+
     private void OnTestAIConnection()
     {
         SfxClick();
@@ -1158,14 +1160,117 @@ public class MainPanel : UIFrame
         // 先保存当前输入
         SaveCurrentAIConfig();
 
-        ShowToast("正在测试连接...", GoldColor);
-        AIChatManager.Instance.TestConnection((success, msg) =>
+        // 创建持久测试浮层（不会自动消失）
+        if (aiTestOverlay != null) Destroy(aiTestOverlay);
+        aiTestOverlay = NewUI("AITestOverlay", rootT);
+        var oR = aiTestOverlay.GetComponent<RectTransform>();
+        oR.anchorMin = oR.anchorMax = new Vector2(0.5f, 0.5f);
+        oR.sizeDelta = new Vector2(320, 120);
+        oR.anchoredPosition = Vector2.zero;
+        var oImg = aiTestOverlay.AddComponent<Image>();
+        oImg.color = new Color(0.08f, 0.08f, 0.08f, 0.95f);
+        oImg.raycastTarget = true;
+
+        // 状态文字
+        var statusObj = NewUI("Status", aiTestOverlay.transform);
+        var sR = statusObj.GetComponent<RectTransform>();
+        sR.anchorMin = new Vector2(0, 0.55f); sR.anchorMax = new Vector2(1, 0.9f);
+        sR.offsetMin = sR.offsetMax = Vector2.zero;
+        var statusText = statusObj.AddComponent<Text>();
+        statusText.font = Font(); statusText.fontSize = 16; statusText.color = GoldColor; statusText.alignment = TextAnchor.MiddleCenter;
+
+        // 进度条背景
+        var barBg = NewUI("BarBg", aiTestOverlay.transform);
+        var bgR = barBg.GetComponent<RectTransform>();
+        bgR.anchorMin = bgR.anchorMax = new Vector2(0.5f, 0.5f);
+        bgR.pivot = new Vector2(0.5f, 0.5f);
+        bgR.sizeDelta = new Vector2(280, 10);
+        bgR.anchoredPosition = Vector2.zero;
+        barBg.AddComponent<Image>().color = new Color(0.2f, 0.2f, 0.2f);
+
+        // 进度条填充
+        var barFill = NewUI("BarFill", barBg.transform);
+        var fR = barFill.GetComponent<RectTransform>();
+        fR.anchorMin = new Vector2(0, 0); fR.anchorMax = new Vector2(0, 1);
+        fR.pivot = new Vector2(0, 0.5f);
+        fR.sizeDelta = new Vector2(0, 0);
+        var fillImg = barFill.AddComponent<Image>();
+        fillImg.color = JadeGreen;
+
+        // 百分比
+        var pctObj = NewUI("Pct", aiTestOverlay.transform);
+        var pR = pctObj.GetComponent<RectTransform>();
+        pR.anchorMin = new Vector2(0, 0.1f); pR.anchorMax = new Vector2(1, 0.45f);
+        pR.offsetMin = pR.offsetMax = Vector2.zero;
+        var pctText = pctObj.AddComponent<Text>();
+        pctText.font = Font(); pctText.fontSize = 13; pctText.color = GoldColor; pctText.alignment = TextAnchor.MiddleCenter;
+
+        // 进度动画 + 测试请求
+        StartCoroutine(TestConnectionRoutine(statusText, fillImg, pctText, fR));
+    }
+
+    private IEnumerator TestConnectionRoutine(Text statusText, Image fillImg, Text pctText, RectTransform fillRect)
+    {
+        // 模拟进度动画（实际请求是异步的，进度条在等待期间走假进度到 90%）
+        statusText.text = "正在连接API服务器...";
+        float progress = 0f;
+        bool requestDone = false;
+        bool success = false;
+        string resultMsg = "";
+
+        AIChatManager.Instance.TestConnection((s, msg) =>
         {
-            if (success)
-                ShowToast("连接成功", JadeGreen);
-            else
-                ShowToast("连接失败: " + msg, ZhuRed);
+            requestDone = true;
+            success = s;
+            resultMsg = msg;
         });
+
+        while (!requestDone)
+        {
+            // 假进度：缓慢爬升到 90%
+            progress = Mathf.MoveTowards(progress, 0.9f, Time.deltaTime * 0.4f);
+            fillRect.sizeDelta = new Vector2(280 * progress, 0);
+            pctText.text = Mathf.RoundToInt(progress * 100) + "%";
+
+            if (progress < 0.3f) statusText.text = "正在连接API服务器...";
+            else if (progress < 0.6f) statusText.text = "正在发送测试请求...";
+            else if (progress < 0.9f) statusText.text = "等待AI回复...";
+
+            yield return null;
+        }
+
+        // 请求完成，填充到 100%
+        progress = 1f;
+        fillRect.sizeDelta = new Vector2(280, 0);
+        pctText.text = "100%";
+
+        if (success)
+        {
+            statusText.text = "✓ 连接成功";
+            fillImg.color = JadeGreen;
+        }
+        else
+        {
+            statusText.text = "✗ " + resultMsg;
+            fillImg.color = ZhuRed;
+        }
+
+        // 等 1.5 秒后自动消失
+        yield return new WaitForSeconds(1.5f);
+
+        if (aiTestOverlay != null)
+        {
+            var cg = aiTestOverlay.GetComponent<CanvasGroup>();
+            if (cg == null) cg = aiTestOverlay.AddComponent<CanvasGroup>();
+            float t = 0;
+            while (t < 0.3f)
+            {
+                t += Time.deltaTime;
+                cg.alpha = 1f - t / 0.3f;
+                yield return null;
+            }
+            Destroy(aiTestOverlay);
+        }
     }
 
     private void OnSaveAISettings()
