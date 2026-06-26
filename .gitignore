@@ -16,6 +16,19 @@
 [Aa]ssets/[Ee]xport[Tt]ools/
 
 # ───────────────────────────────────────
+# TextMesh Pro auto-imported examples & docs
+# (keep Fonts/Resources/Shaders, ignore the rest)
+# ───────────────────────────────────────
+[Aa]ssets/TextMesh Pro/Examples & Extras/
+[Aa]ssets/TextMesh Pro/Documentation/
+
+# ───────────────────────────────────────
+# Unity auto-generated URP/HDRP settings (if not using SRP)
+# ───────────────────────────────────────
+[Aa]ssets/UniversalRenderPipelineGlobalSettings.asset
+[Aa]ssets/UniversalRenderPipelineGlobalSettings.asset.meta
+
+# ───────────────────────────────────────
 # MonoDevelop / Visual Studio / Rider
 # ───────────────────────────────────────
 *.csproj
