@@ -18,7 +18,7 @@ public class AIConfig
 
     [Header("生成参数")]
     [Tooltip("最大生成长度")]
-    public int maxTokens = 512;
+    public int maxTokens = 256;
 
     [Tooltip("温度（越高越随机）")]
     [Range(0f, 1f)]
@@ -52,7 +52,7 @@ public class AIConfig
         if (PlayerPrefs.HasKey(PREF_API_KEY))
             config.apiKey = PlayerPrefs.GetString(PREF_API_KEY);
         if (PlayerPrefs.HasKey(PREF_MAX_TOKENS))
-            config.maxTokens = PlayerPrefs.GetInt(PREF_MAX_TOKENS, 512);
+            config.maxTokens = PlayerPrefs.GetInt(PREF_MAX_TOKENS, 256);
         if (PlayerPrefs.HasKey(PREF_TEMPERATURE))
             config.temperature = PlayerPrefs.GetFloat(PREF_TEMPERATURE, 0.7f);
         if (PlayerPrefs.HasKey(PREF_TIMEOUT))

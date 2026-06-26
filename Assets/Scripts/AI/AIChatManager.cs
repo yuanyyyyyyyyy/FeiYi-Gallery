@@ -371,7 +371,7 @@ public class AIChatManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 构建品类知识上下文（从GameManager加载的数据中提取）
+    /// 构建品类知识上下文（精简版，只注入摘要避免 prompt 过长导致响应缓慢）
     /// </summary>
     private string BuildKnowledgeContext()
     {
@@ -380,61 +380,51 @@ public class AIChatManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(category))
         {
-            // 注入展品知识
+            // 只注入展品名+简述，不注入全文（history/craft/meaning 太长）
             var exhibits = GameManager.Instance.GetExhibitsByCategory(category);
             if (exhibits != null && exhibits.Count > 0)
             {
-                sb.AppendLine($"【{category}展品】");
+                sb.AppendLine($"【{category}展品（共{exhibits.Count}件）】");
                 foreach (var e in exhibits)
                 {
                     sb.AppendLine($"- {e.name}：{e.description}");
-                    if (!string.IsNullOrEmpty(e.history))
-                        sb.AppendLine($"  历史背景：{e.history}");
-                    if (!string.IsNullOrEmpty(e.craft))
-                        sb.AppendLine($"  制作工艺：{e.craft}");
-                    if (!string.IsNullOrEmpty(e.meaning))
-                        sb.AppendLine($"  文化寓意：{e.meaning}");
                 }
             }
 
-            // 注入文化知识
+            // 只注入知识标题，不注入全文
             var knowledge = GameManager.Instance.GetKnowledgeByCategory(category);
             if (knowledge != null && knowledge.Count > 0)
             {
-                sb.AppendLine($"\n【{category}文化知识】");
+                sb.AppendLine($"\n【{category}文化知识（共{knowledge.Count}篇）】");
                 foreach (var k in knowledge)
                 {
-                    sb.AppendLine($"- {k.title}：{k.content}");
+                    sb.AppendLine($"- {k.title}");
                 }
             }
 
-            // 注入历史事件
+            // 只注入事件标题+朝代，不注入全文
             var events = GameManager.Instance.GetEventsByCategory(category);
             if (events != null && events.Count > 0)
             {
-                sb.AppendLine($"\n【{category}历史故事】");
+                sb.AppendLine($"\n【{category}历史故事（共{events.Count}篇）】");
                 foreach (var ev in events)
                 {
-                    sb.AppendLine($"- {ev.title}（{ev.era}）：{ev.description}");
+                    sb.AppendLine($"- {ev.title}（{ev.era}）");
                 }
             }
+
+            sb.AppendLine("\n注：以上为知识索引，用户追问具体展品或知识时，凭你自身知识回答即可。");
         }
         else
         {
-            // 守艺人通用模式，注入所有品类的概要
-            sb.AppendLine("【非遗四大品类概览】");
+            // 守艺人通用模式，只列品类名+展品数，不逐条列出
+            sb.AppendLine("【非遗八大品类】");
             string[] categories = { "瓷器", "剪纸", "书法", "民族乐器", "刺绣", "茶艺", "皮影戏", "扎染蜡染" };
             foreach (var cat in categories)
             {
                 var exhibits = GameManager.Instance.GetExhibitsByCategory(cat);
-                if (exhibits != null && exhibits.Count > 0)
-                {
-                    sb.AppendLine($"\n{cat}：");
-                    foreach (var e in exhibits)
-                    {
-                        sb.AppendLine($"  - {e.name}：{e.description}");
-                    }
-                }
+                int count = exhibits != null ? exhibits.Count : 0;
+                sb.AppendLine($"- {cat}（{count}件展品）");
             }
         }
 
