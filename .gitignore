@@ -145,6 +145,11 @@ TestResults/
 .com-unity-codely.json
 
 # ───────────────────────────────────────
+# Course report (internal document, not for public repo)
+# ───────────────────────────────────────
+*.课程报告书.md
+
+# ───────────────────────────────────────
 # Backpack runtime data (user-specific, generated at runtime)
 # ───────────────────────────────────────
 [Aa]ssets/StreamingAssets/Backpack/
